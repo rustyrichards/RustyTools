@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Testing Frame</title>
+		<style>
+		  #report .testFrame  {border-width:5px; border-style:ridge; padding: 5px; margin-bottom: 5px;}
+		  #report .excepted {border-color:#800;}
+		  #report .failed {border-color:#F00;}
+		  #report .passed {border-color:#080;}
+		  #report .description {font-weight:bold;}
+          #report .test {margin-bottom: 1em;}
+          #report .log {margin-left: 2em; color: #446;}
+          #report .error {margin-left: 2em; color: #800;}
+          #report .exception {margin-left: 2em; color: #800;}
+		</style>
+	</head>
+	<body>
+		<div id="report" />
+		<script src="translate.js"></script>
+		<script src="rustyTools.js"></script>
+		<script src="rustyToolsTester.js"></script>
+		<script src="translateTest.js"></script>
+	</body>
+</html>
