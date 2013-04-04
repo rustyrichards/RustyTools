@@ -213,21 +213,37 @@ RustyTools.Tester.prototype.test = function(toTest) {
   return this;
 };
 
-RustyTools.Tester.prototype.testAll = function(opt_root) {
-  var root = opt_root || window;
+RustyTools.Tester.prototype.testAllInternal_ = function(parentObj, visited) {
+  visited[parentObj] = true;
 
-  for (var key in root) {
+  for (var key in parentObj) {
     // To test this should be a constructor or an object.
-    var obj = root[key];
+    var obj = parentObj[key];
     var type = typeof obj;
     if (obj && ('function' == type || 'object' == type) &&
         obj.hasOwnProperty(this.config.name)) {
       this.testOneFunction(obj[this.config.name]);
+
+      // If this has not already handled obj, walk its children looking for more
+      // testable objects.
+      if (!visited[obj]) this.testAllInternal_(obj, visited);
     }
   }
 
   return this;
 };
+
+// testAll will crawl down all testable children of opt_root.
+//
+// NOTE: This recursion will only follow testable objects.
+//        x.test, -> x.y.test, x.y.z.test works.
+//        x.test == undefined -> x.y.text does not work.
+RustyTools.Tester.prototype.testAll = function(opt_root) {
+  var root = opt_root || window;
+
+  this.testAllInternal_(root, {});
+  return this;
+}
 
 RustyTools.Tester.prototype.toJson = function() {
   return JSON.stringify(this.data);
