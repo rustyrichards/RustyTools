@@ -11,13 +11,6 @@ RustyTools.configure({
   notFail: '@1@\n    is not falsy.',
 });
 
-RustyTools.multiReplace = function(str) {
-  replaceArgs = arguments;
-  for (var i=1; i<arguments.length; i++) {
-    str = str.replace('@' + i + '@', arguments[i].toString());
-  }
-  return str;
-};
 // This can't inherit from RegExp it gives the exception:
 //   TypeError: Method RegExp.prototype.exec called on incompatible receiver [object Object]
 // So instead inject "find" to work like "exec", except an array is always returned.
@@ -61,12 +54,14 @@ RustyTools.Tester.Record = function(description, test) {
   this.test = test;
 };
 
-RustyTools.Tester.Record.prototype.setError = function(error) {
-  this.error = error;
+RustyTools.Tester.Record.prototype.addError = function(error) {
+  if (this.error) this.error += '\n' + error;
+  else this.error = error;
 };
 
-RustyTools.Tester.Record.prototype.setException = function(e) {
-  this.exception = e.toString();
+RustyTools.Tester.Record.prototype.addException = function(e) {
+  if (this.exception) this.exception += '\n' + e.toString();
+  else this.exception = e.toString();
 };
 
 RustyTools.Tester.Record.prototype.logObjects = function() {
@@ -95,7 +90,7 @@ RustyTools.Tester.Record.prototype.match = function(expr, str, opt_match) {
 
   var found = expr.find(str);
   if (opt_match != found[0]) {
-    this.setError(RustyTools.multiReplace(RustyTools.cfg.matchFail, expr.toString(),
+    this.addError(RustyTools.multiReplace(RustyTools.cfg.matchFail, expr.toString(),
         RustyTools.quote(str), RustyTools.quote(found[0]), RustyTools.quote(opt_match)));
     return false;
   }
@@ -105,7 +100,7 @@ RustyTools.Tester.Record.prototype.match = function(expr, str, opt_match) {
 RustyTools.Tester.Record.prototype.noMatch = function(expr, str) {
   var found = expr.find(str);
   if (found.length) {
-    this.setError(RustyTools.multiReplace(RustyTools.cfg.noMatchFail,
+    this.addError(RustyTools.multiReplace(RustyTools.cfg.noMatchFail,
         expr.toString(), RustyTools.quote(str), RustyTools.quote(found[0])));
     return false;
   }
@@ -114,7 +109,7 @@ RustyTools.Tester.Record.prototype.noMatch = function(expr, str) {
 
 RustyTools.Tester.Record.prototype.same = function(a, b) {
   if (a != b) {
-    this.setError(RustyTools.multiReplace(RustyTools.cfg.sameFail, a, b));
+    this.addError(RustyTools.multiReplace(RustyTools.cfg.sameFail, a, b));
     return false;
   }
   return true;
@@ -122,7 +117,7 @@ RustyTools.Tester.Record.prototype.same = function(a, b) {
 
 RustyTools.Tester.Record.prototype.different = function(a, b) {
   if (a == b) {
-    this.setError(RustyTools.multiReplace(RustyTools.cfg.differentFail, a, b));
+    this.addError(RustyTools.multiReplace(RustyTools.cfg.differentFail, a, b));
     return false;
   }
   return true;
@@ -130,7 +125,7 @@ RustyTools.Tester.Record.prototype.different = function(a, b) {
 
 RustyTools.Tester.Record.prototype.not = function(a) {
   if (a) {
-    this.setError(RustyTools.multiReplace(RustyTools.cfg.notFail, a));
+    this.addError(RustyTools.multiReplace(RustyTools.cfg.notFail, a));
     return false;
   }
   return true;
@@ -159,7 +154,7 @@ RustyTools.Tester.prototype.testOneFunction = function(testFunction) {
     // if test throws record the throw!
     var record = new RustyTools.Tester.Record(this.currentDescription,
         testFunction.toString());
-    record.setException(e);
+    record.addException(e);
     this.data.excepted.push(record);
   }
 };
@@ -178,7 +173,7 @@ RustyTools.Tester.prototype.recordTestResults = function(testItem) {
     		this.data.failed.push(record);
   	  }
   	} catch (e) {
-      record.setException(e);
+      record.addException(e);
   	  this.data.excepted.push(record);
   	}
   }

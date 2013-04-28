@@ -1,6 +1,4 @@
 NumberToken.__test = function(tester) {
-  var results = [];
-
   // Decimal constructor
   var number = new NumberToken({decimal: '\\.', exp: '[eE]'});
   var expr = new RegExp(number.toRegExpStr());
