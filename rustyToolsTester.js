@@ -83,52 +83,51 @@ RustyTools.Tester.Record.prototype.logObjects = function() {
 
 /**
  * Tester functions that will write into Record.
- * @return {boolean} True for success
  */
 RustyTools.Tester.Record.prototype.match = function(expr, str, opt_match) {
+  this.tested = true;
   if (!opt_match) opt_match = str;
 
   var found = expr.find(str);
   if (opt_match != found[0]) {
     this.addError(RustyTools.multiReplace(RustyTools.cfg.matchFail, expr.toString(),
         RustyTools.quote(str), RustyTools.quote(found[0]), RustyTools.quote(opt_match)));
-    return false;
+    this.failed = true;
   }
-  return true;
 };
 
 RustyTools.Tester.Record.prototype.noMatch = function(expr, str) {
+  this.tested = true;
   var found = expr.find(str);
   if (found.length) {
     this.addError(RustyTools.multiReplace(RustyTools.cfg.noMatchFail,
         expr.toString(), RustyTools.quote(str), RustyTools.quote(found[0])));
-    return false;
+    this.failed = true;
   }
-  return true;
 };
 
 RustyTools.Tester.Record.prototype.same = function(a, b) {
+  this.tested = true;
   if (a != b) {
     this.addError(RustyTools.multiReplace(RustyTools.cfg.sameFail, a, b));
-    return false;
+    this.failed = true;
   }
-  return true;
 };
 
 RustyTools.Tester.Record.prototype.different = function(a, b) {
+  this.tested = true;
   if (a == b) {
     this.addError(RustyTools.multiReplace(RustyTools.cfg.differentFail, a, b));
-    return false;
+    this.failed = true;
   }
-  return true;
 };
 
 RustyTools.Tester.Record.prototype.not = function(a) {
+  this.tested = true;
   if (a) {
     this.addError(RustyTools.multiReplace(RustyTools.cfg.notFail, a));
     return false;
   }
-  return true;
 };
 
 
@@ -146,37 +145,28 @@ RustyTools.Tester.prototype.reset = function() {
   this.data.reset();
 };
 
-RustyTools.Tester.prototype.testOneFunction = function(testFunction) {
-  // Run the testFunction - record any exception!
-  try {
-    testFunction(this);
-  } catch (e) {
-    // if test throws record the throw!
-    var record = new RustyTools.Tester.Record(this.currentDescription,
-        testFunction.toString());
-    record.addException(e);
-    this.data.excepted.push(record);
-  }
-};
-
 RustyTools.Tester.prototype.recordTestResults = function(testItem) {
   if (testItem[this.config.name] &&
       'function' === typeof testItem[this.config.name]) {
-    this.testOneFunction(testItem[this.config.name]);
-  } else {
-    var record = new RustyTools.Tester.Record(this.currentDescription,
-        testItem.toString());
-  	try {
-  	  if (testItem(record)) {
-    		this.data.passed.push(record);
-  	  } else {
-    		this.data.failed.push(record);
-  	  }
-  	} catch (e) {
-      record.addException(e);
-  	  this.data.excepted.push(record);
-  	}
+    testItem = testItem[this.config.name];
   }
+  var record = new RustyTools.Tester.Record(this.currentDescription,
+      testItem.toString());
+	try {
+    testItem(this, record);
+    if (record.tested) {
+      delete record.tested;
+      if (!record.failed) {
+        this.data.passed.push(record);
+      } else {
+        delete record.failed;
+        this.data.failed.push(record);
+      }
+    }
+	} catch (e) {
+    record.addException(e);
+	  this.data.excepted.push(record);
+	}
   return this;
 };
 
@@ -217,7 +207,7 @@ RustyTools.Tester.prototype.testAllInternal_ = function(parentObj, visited) {
     var type = typeof obj;
     if (obj && ('function' == type || 'object' == type) &&
         obj.hasOwnProperty(this.config.name)) {
-      this.testOneFunction(obj[this.config.name]);
+      this.test(obj[this.config.name]);
 
       // If this has not already handled obj, walk its children looking for more
       // testable objects.
@@ -228,17 +218,44 @@ RustyTools.Tester.prototype.testAllInternal_ = function(parentObj, visited) {
   return this;
 };
 
-// testAll will crawl down all testable children of opt_root.
+// testAll will crawl down all testable children of its arguments or
+// window if it has no arguments.
 //
 // NOTE: This recursion will only follow testable objects.
 //        x.test, -> x.y.test, x.y.z.test works.
 //        x.test == undefined -> x.y.text does not work.
-RustyTools.Tester.prototype.testAll = function(opt_root) {
-  var root = opt_root || window;
+RustyTools.Tester.prototype.testAll = function() {
+  var toTest = (arguments.length) ? arguments : [window];
 
-  this.testAllInternal_(root, {});
+  for (var i=0; i<toTest.length; i++) this.testAllInternal_(toTest[i], {});
   return this;
 }
+
+// Test once testFn has passed.
+// NOTE: use callAfterTestFn instead of chaining because testAllWhenPassed may not finish
+// no the first call!
+RustyTools.Tester.prototype.testAllWhenPassed = function(testFn, retryDelay, callAfterTestFn) {
+  if (testFn()) {
+    if ((arguments.length > 3) || (!(arguments[2] instanceof Array))) {
+      this.testAll.apply(this, Array.prototype.slice.call(arguments, 2));
+    } else {
+      this.testAll.apply(this, arguments[2]);
+    }
+
+    if (callAfterTestFn) callAfterTestFn();
+  } else if (retryDelay) {
+    setTimeout(this.testAllWhenPassed.bind(this, testFn, retryDelay, callAfterTest, 
+        Array.prototype.slice.call(arguments, 2)), retryDelay);
+  }
+};
+
+// Test once testFn has passed
+// NOTE: use callAfterTestFn instead of chaining because testAllWhenPassed may not finish
+// no the first call!
+RustyTools.Tester.prototype.testAllWhenAvailable = function(xpathOrJQuery, retryDelay, callAfterTestFn) {
+  this.testAllWhenPassed(function(){return RustyTools.isEnabled(xpathOrJQuery);}, retryDelay, callAfterTestFn, 
+      Array.prototype.slice.call(arguments, 2));
+};
 
 RustyTools.Tester.prototype.toJson = function() {
   return JSON.stringify(this.data);

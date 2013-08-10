@@ -170,7 +170,7 @@ Translator.prototype.translate_ = function(tokens, languageTree, symbolTable,
     context) {
   var output = [];
   var index = 0;
-  var moreTokens = input.length +2;
+  var moreTokens = input.length + 2;
   while (index <= moreTokens) {
     var type = tokens[index++];
 
@@ -196,18 +196,22 @@ Translator.prototype.translate_ = function(tokens, languageTree, symbolTable,
   return output;
 };
 
-Translator.prototype.translate = function(input, contextObject) {
+/**
+ * translate takes in the source sting, tokenizes it, and then
+ * uses translate_ to produce the output
+ */
+Translator.prototype.translate = function(src, contextObject) {
   if (!contextObject) contextObject = {};
 
   var symbolTable = this.clone(this.initialSymbolTable);
-  var tokens = this.extractTokens(input);
+  var tokens = this.extractTokens(src);
 
   var errorLocation = tokens.indexOf(0);
   if (-1 != errorLocation) {
     this.showError("Unknown token", errorLocation, tokens);
     return [];
   } else {
-    return this.translate_(tokens, languageTree, symbolTable, contextObject);
+    return this.translate_(tokens, this.languageTree, symbolTable, contextObject);
   }
 };
 

@@ -91,3 +91,29 @@ RustyTools.multiReplace = function(str) {
 
   return str;
 };
+
+RustyTools.isEnabled = function(xpathOrJQuery) {
+  var enabled = false;
+
+  // NOTE: document.evaluate / xpath is not supported by I.E
+  if (document.evaluate && -1 < xpathOrJQuery.search(/\//)) {
+    var elements = document.evaluate(xpathOrJQuery, document, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null); 
+    var el;
+    try {
+       while ((el = elements.iterateNext()) && (enabled = !el.disabled));
+    } catch (e) {}
+  } else {
+    var hasJquery = false;
+    try {
+      hasJQuery = 'function' == typeof $;
+    } catch (e) {}
+    if (hasJquery) {
+      $(idOrJqueryPattern).each(function(inedex, element){enabled = !element.disabled; return enabled;});
+    } else if ('#' == xpathOrJQuery[0]) {
+      var el = document.getElementById(xpathOrJQuery.substr(1));
+      enabled = el && !el.disabled;
+    }
+  }
+  return enabled;
+};
+
