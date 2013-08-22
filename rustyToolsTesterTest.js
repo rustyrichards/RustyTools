@@ -20,7 +20,8 @@ RustyTools.__test = function(t, r) {
     function(t, r) {r.same(RustyToolsTest.cfg.templateMatchKey, '<-@-/?>');},
     function(t, r) {
       RustyToolsTest.configure({y_test: ['c', 'd']});
-      r.same(RustyToolsTest.cfg.y_test[0], 'c');
+      // y_test: should now be ['a', 'b', 3.3, false, 'c, 'd]
+      return r.same(RustyToolsTest.cfg.y_test[4], 'c');
     },
     function(t, r) {r.same(RustyToolsTest.cfg.y_test[2], 3.3);},
 

@@ -1,41 +1,60 @@
-window['RustyTools'] || (RustyTools = {
-  cfg: {stringQuote: '"'},
-  /**
-   * RustyTools.configure will overwrite any matching RustyTools members.
-   * Use this for setting and extending configuration variables.
-   */
-  configure: function(configObj) {
-    if (configObj) RustyTools.addElements(this.cfg, configObj);
-    return this;
-  }
-});
+window['RustyTools'] || (RustyTools = {});
 
-RustyTools.addElements = function(dest, config) {
-  for (var key in config) {
-    var element = config[key];
-    if (element instanceof Function) {
-      // Alias function objects do not deep copy
-      dest[key] = element;
-    } else if (element instanceof RegExp) {
-      // Alias all RegExp
-      dest[key] = element;
-    } else if (element instanceof Array) {
-      // Array - for all elements in config replace those entries in dest.
-      if (!(dest[key] instanceof Array)) dest[key] = [];
-      RustyTools.addElements(dest[key], element);
-    } else if (element instanceof Object) {
-      // Object - for all items in config  replace those entries in dest.
-      if (!(dest[key] instanceof Object)) dest[key] = {};
-      RustyTools.addElements(dest[key], element);
-    } else {
-      dest[key] = element;
+/**********
+Note:   cloneOneLevel will reserence/alias the objects.  This is to prevent infinite recursion,
+        but be carefull of mutating the objects!
+
+        RustyTools.cloneOneLevel can not be in the object notation because it must be called - see below.
+**********/
+
+RustyTools.cloneOneLevel = function(/* config objects */) {
+  var result = {};
+  for (var i=0; i<arguments.length; i++) {
+    var toClone = arguments[i];
+    if (toClone) {
+      for (var key in toClone) {
+        if (toClone.hasOwnProperty(key)) {
+          var property = toClone[key];
+          if (property instanceof Function) {
+            // Alias function objects do not deep copy
+            result[key] = property;
+          } else if (property instanceof RegExp) {
+            // Alias all RegExp
+            result[key] = property;
+          } else if (property instanceof Array) {
+            // Array - append all the array values.
+            if (!(result[key] instanceof Array)) result[key] = [];
+            result[key] = result[key].concat(property);
+          } else if (property instanceof Object) {
+            // Object - for all items in config  replace those entries in result.
+            if (!(result[key] instanceof Object)) result[key] = {};
+            for (var j in property) {
+              if (property.hasOwnProperty(i)) result[key][j] = property[j];
+            }
+          } else {
+            result[key] = property;
+          }
+        }
+      }
     }
   }
-
-  return dest;
+  return result;
 };
 
+RustyTools.cfg =  RustyTools.cloneOneLevel({stringQuote: '"'}, RustyTools.cfg);
+
 /**
+ * RustyTools.configure will overwrite any matching RustyTools members.
+ * Use this for setting and extending configuration variables.
+ */
+RustyTools.configure = function(/* config object(s) */) {
+  var callParams = Array.prototype.slice.call(arguments, 0);
+  callParams.unshift(this.cfg);
+  this.cfg = RustyTools.cloneOneLevel.apply(null, callParams);
+  return this;
+};
+
+/*
  * RustyTools.wrapObject uses prototype inheritance to make a wrapper around
  * an existing object.  This allows the wrapping of objects so some members
  * can be overridden.
@@ -44,7 +63,7 @@ RustyTools.wrapObject = function(obj) {
   function InheritWrapper() {};
   InheritWrapper.prototype = obj;
   return new InheritWrapper();
-};
+},
 
 RustyTools.entitize = function(str, opt_skipLineBreak) {
   var str2 = ((str) ? str.toString() : '').replace(/&/g, '&amp;').
@@ -52,7 +71,7 @@ RustyTools.entitize = function(str, opt_skipLineBreak) {
       replace(/ /g, '&nbsp;');
   if (!opt_skipLineBreak) str2 = str2.replace(/\r\n|\r|\n/g, '<br/>');
   return str2;
-};
+},
 
 RustyTools.quote = function(str, quote) {
   if (!quote) quote = RustyTools.stringQuote;
@@ -60,10 +79,15 @@ RustyTools.quote = function(str, quote) {
   return quote + ((str) ? str.toString() : '').replace(expr, '\\' + quote) + quote;
 };
 
-RustyTools.multiReplace = function(str) {
+/*
+ * multiReplace - replace @1@, @2@, @3@, etc with the supplied parameters.
+ *                Note: the supplied parameter can be a function; in whihc case it
+ *                is passed the match and index.
+ */
+RustyTools.multiReplace = function(str /*, ...*/) {
   var matches = [];
   var replaceArgs = arguments;
-  str = str.replace(/@([1-9][0-9]*)@/g, function(match, indexStr) {
+  var result = str.replace(/@([1-9][0-9]*)@/g, function(match, indexStr) {
     var index = parseInt(indexStr, 10);
     if (0<index && index<replaceArgs.length) {
       if (!matches[index]) {
@@ -78,7 +102,11 @@ RustyTools.multiReplace = function(str) {
             break;
           default:
             try {
-              converted = converted.toString(10);
+              if ('function' == typeof converted) {
+                converted = converted(match, index);
+              } else {
+                converted = converted.toString(10);
+              }
             } catch (e) {
               converted = 'falsy';
             }
@@ -89,7 +117,7 @@ RustyTools.multiReplace = function(str) {
     return matches[index];
   });
 
-  return str;
+  return result;
 };
 
 RustyTools.isEnabled = function(xpathOrJQuery) {
