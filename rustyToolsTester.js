@@ -244,7 +244,7 @@ RustyTools.Tester.prototype.testAllWhenPassed = function(testFn, retryDelay, cal
 
     if (callAfterTestFn) callAfterTestFn();
   } else if (retryDelay) {
-    setTimeout(this.testAllWhenPassed.bind(this, testFn, retryDelay, callAfterTest, 
+    setTimeout(this.testAllWhenPassed.bind(this, testFn, retryDelay, callAfterTestFn, 
         Array.prototype.slice.call(arguments, 2)), retryDelay);
   }
 };
