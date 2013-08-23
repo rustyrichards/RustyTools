@@ -24,6 +24,10 @@ RustyTools.__test = function(t, r) {
       return r.same(sum, 9);
     },
     function(t, r) {
+      var max = RustyToolsTest._testableReduce(false, [2, 3, 11], RustyTools.cury2(Math.max));
+      return r.same(max, 11);
+    },
+    function(t, r) {
       var testArray = [2, 3, 4];
       var left = RustyToolsTest._testableReduce(false, testArray, function(x, y) {return x});
       return r.same(left, 2);
