@@ -145,3 +145,112 @@ RustyTools.isEnabled = function(xpathOrJQuery) {
   return enabled;
 };
 
+// Functional support
+// Reduce implementation from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
+RustyTools._testableReduce = function(reduceRight, array, callback, opt_initialValue) {
+  'use strict';
+  if (null === array || 'undefined' === typeof array) {
+    // At the moment all modern browsers, that support strict mode, have
+    // native implementation of Array.prototype.reduce. For instance, IE8
+    // does not support strict mode, so this check is actually useless.
+    throw new TypeError('Array.prototype.reduce called on null or undefined');
+  }
+  if ('function' !== typeof callback) {
+    throw new TypeError(callback + ' is not a function');
+  }
+  var index, value,
+      length = array.length >>> 0,
+      isValueSet = false;
+  if (3 < arguments.length) {
+    value = opt_initialValue;
+    isValueSet = true;
+  }
+  for (index = (reduceRight) ? (length - 1) : 0; length > index && -1 < index; 
+        (reduceRight) ? index-- : ++index) {
+    if (array.hasOwnProperty(index)) {
+      if (isValueSet) {
+        value = callback(value, array[index], index, array);
+      } else {
+        value = array[index];
+        isValueSet = true;
+      }
+    }
+  }
+  if (!isValueSet) {
+    throw new TypeError('Reduce of empty array with no initial value');
+  }
+  return value;
+};
+
+if ('function' !== typeof Array.prototype.reduce) {
+  Array.prototype.reduce = function(callback, opt_initialValue) {
+    var params = Array.prototype.slice.call(arguments, 0);
+    params.unshift(this);
+    params.unshift(false);
+    return RustyTools._testableReduce.apply(RustyRools, params);
+  };
+
+  Array.prototype.reduceRight = function(callback, opt_initialValue) {
+    var params = Array.prototype.slice.call(arguments, 0);
+    params.unshift(this);
+    params.unshift(true);
+    return RustyTools._testableReduce.apply(RustyRools, params);
+  };
+}
+
+// Map implementation from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/Map
+// Production steps of ECMA-262, Edition 5, 15.4.4.19
+// Reference: http://es5.github.com/#x15.4.4.19
+RustyTools._testableMap = function(array, callback, opt_thisArg) {
+
+  if (array == null) {
+    throw new TypeError('Array.prototype.map called on null or undefined');
+  }
+
+  // Do the validation before creating objects/arays! - Rusty
+  // 4. If IsCallable(callback) is false, throw a TypeError exception.
+  // See: http://es5.github.com/#x9.11
+  if (typeof callback !== "function") {
+    throw new TypeError(callback + " is not a function");
+  }
+
+  // 1. Let O be the result of calling ToObject passing the |array| value as the argument.
+  var O = Object(array);
+
+  // 2. Let lenValue be the result of calling the Get internal method of O with the argument "length".
+  // 3. Let len be ToUint32(lenValue).
+  var k = O.length >>> 0;
+
+  // 5. If opt_thisArg was supplied, let T be thisArg of null if T is falsy
+  var T = opt_thisArg || null;
+
+  // 6. Let result be a new array created as if by the expression new Array(len) where Array is
+  // the standard built-in constructor with that name and len is the value of len.
+  var result = new Array(k);
+
+  // 7. work from right to make the while slightly faster
+  while(k--) {
+    if (k in O) {
+      // ii. Let mappedValue be the result of calling the Call internal method of callback
+      // with T as the this value and argument list containing kValue, k, and O.
+      result[ k ] = callback.call(T, O[ k ], k, O);
+    }
+  }
+
+  // 9. return result
+  return result;
+};
+
+if (!Array.prototype.map) {
+  Array.prototype.map = function(callback, opt_thisArg) {
+    RustyTools._testableMap(this, callback, opt_thisArg);
+  };
+}
+
+RustyTools.predicateToValue = function(functionPredicate, trueValue, falseValue) {
+  return function() {
+    var params = Array.prototype.slice.call(arguments, 0);
+    if (functionPredicate.apply(null, params)) return trueValue;
+    return falseValue;
+  };
+};

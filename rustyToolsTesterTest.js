@@ -9,11 +9,35 @@ RustyTools.__test = function(t, r) {
   // r.p level RustyTools methods
   t.test([
     'RustyTools.__test\n' +
+    'RustyTools.map, RustyTools.map && RusyTools.predicateToValue',
+    function(t, r) {
+      var doubled = RustyToolsTest._testableMap([2, 3, 4], function(x) {return x + x});
+      return r.same(doubled, [4, 6, 8]);
+    },
+    function(t, r) {
+      var evenOrOdd = RustyToolsTest.predicateToValue(function(x) {return x & 1}, 'odd', 'even');
+      var kinds = RustyToolsTest._testableMap([2, 3, 4], evenOrOdd);
+      return r.same(kinds, ['even', 'odd', 'even']);
+    },
+    function(t, r) {
+      var sum = RustyToolsTest._testableReduce(false, [2, 3, 4], function(x, y) {return x + y});
+      return r.same(sum, 9);
+    },
+    function(t, r) {
+      var testArray = [2, 3, 4];
+      var left = RustyToolsTest._testableReduce(false, testArray, function(x, y) {return x});
+      return r.same(left, 2);
+    },
+    function(t, r) {
+      var testArray = [2, 3, 4];
+      var right = RustyToolsTest._testableReduce(true, testArray, function(x, y) {return x});
+      return r.same(right, 4);
+    },
     'RustyTools.configure && addElements (configure calls addElements)',
     function(t, r) {
-        RustyToolsTest.configure({x_test: "string",
-        y_test: ['a', 'b', 3.3, false]});
-        r.same(RustyToolsTest.cfg.x_test, "string");
+      RustyToolsTest.configure({x_test: "string",
+      y_test: ['a', 'b', 3.3, false]});
+      r.same(RustyToolsTest.cfg.x_test, "string");
     },
     function(t, r) {r.same(RustyToolsTest.cfg.y_test[0], 'a');},
     function(t, r) {r.same(RustyToolsTest.cfg.y_test[3], false);},

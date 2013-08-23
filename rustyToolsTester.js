@@ -108,6 +108,11 @@ RustyTools.Tester.Record.prototype.noMatch = function(expr, str) {
 
 RustyTools.Tester.Record.prototype.same = function(a, b) {
   this.tested = true;
+  var different = false;
+  if (a && !(a instanceof String) && a.length && (a.length == b.length)) {
+    for (var i=0; !different && i<a.length; i++) different = a[i] != b[i];
+    if (!different) a = b = true;
+  }
   if (a != b) {
     this.addError(RustyTools.multiReplace(RustyTools.cfg.sameFail, a, b));
     this.failed = true;
@@ -116,6 +121,13 @@ RustyTools.Tester.Record.prototype.same = function(a, b) {
 
 RustyTools.Tester.Record.prototype.different = function(a, b) {
   this.tested = true;
+
+  var same = false;
+  if (a && !(a instanceof String) && a.length && (a.length == b.length)) {
+    same = true;
+    for (var i=0; !same && i<a.length; i++) same = a[i] == b[i];
+    if (!same) a = ! b = true;
+  }
   if (a == b) {
     this.addError(RustyTools.multiReplace(RustyTools.cfg.differentFail, a, b));
     this.failed = true;
