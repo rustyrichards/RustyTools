@@ -1,4 +1,4 @@
-window['RustyTools'] || (RustyTools = {});
+window['RustyTools'] || (window['RustyTools'] = RustyTools = {});
 
 /**********
 Note:   cloneOneLevel will reserence/alias the objects.  This is to prevent infinite recursion,
@@ -6,7 +6,6 @@ Note:   cloneOneLevel will reserence/alias the objects.  This is to prevent infi
 
         RustyTools.cloneOneLevel can not be in the object notation because it must be called - see below.
 **********/
-
 RustyTools.cloneOneLevel = function(/* config objects */) {
   var result = {};
   for (var i=0; i<arguments.length; i++) {
@@ -41,8 +40,6 @@ RustyTools.cloneOneLevel = function(/* config objects */) {
   return result;
 };
 
-RustyTools.cfg =  RustyTools.cloneOneLevel({stringQuote: '"'}, RustyTools.cfg);
-
 /**
  * RustyTools.configure will overwrite any matching RustyTools members.
  * Use this for setting and extending configuration variables.
@@ -50,9 +47,13 @@ RustyTools.cfg =  RustyTools.cloneOneLevel({stringQuote: '"'}, RustyTools.cfg);
 RustyTools.configure = function(/* config object(s) */) {
   var callParams = Array.prototype.slice.call(arguments, 0);
   callParams.unshift(this.cfg);
-  this.cfg = RustyTools.cloneOneLevel.apply(null, callParams);
+  this.cfg = RustyTools.cloneOneLevel.apply(this, callParams);
   return this;
 };
+
+
+// Configure once RustyTools.configure is set. 
+RustyTools.configure({stringQuote: '"'});
 
 /*
  * RustyTools.wrapObject uses prototype inheritance to make a wrapper around
@@ -63,61 +64,6 @@ RustyTools.wrapObject = function(obj) {
   function InheritWrapper() {};
   InheritWrapper.prototype = obj;
   return new InheritWrapper();
-},
-
-RustyTools.entitize = function(str, opt_skipLineBreak) {
-  var str2 = ((str) ? str.toString() : '').replace(/&/g, '&amp;').
-      replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&#34;').
-      replace(/ /g, '&nbsp;');
-  if (!opt_skipLineBreak) str2 = str2.replace(/\r\n|\r|\n/g, '<br/>');
-  return str2;
-},
-
-RustyTools.quote = function(str, quote) {
-  if (!quote) quote = RustyTools.stringQuote;
-  var expr = new RegExp(quote, 'g');
-  return quote + ((str) ? str.toString() : '').replace(expr, '\\' + quote) + quote;
-};
-
-/*
- * multiReplace - replace @1@, @2@, @3@, etc with the supplied parameters.
- *                Note: the supplied parameter can be a function; in whihc case it
- *                is passed the match and index.
- */
-RustyTools.multiReplace = function(str /*, ...*/) {
-  var matches = [];
-  var replaceArgs = arguments;
-  var result = str.replace(/@([1-9][0-9]*)@/g, function(match, indexStr) {
-    var index = parseInt(indexStr, 10);
-    if (0<index && index<replaceArgs.length) {
-      if (!matches[index]) {
-        var converted = replaceArgs[index];
-        var undef;
-        switch (converted) {
-          case undef:
-            converted = 'undefined';
-            break;
-          case null:
-            converted = 'null';
-            break;
-          default:
-            try {
-              if ('function' == typeof converted) {
-                converted = converted(match, index);
-              } else {
-                converted = converted.toString(10);
-              }
-            } catch (e) {
-              converted = 'falsy';
-            }
-        }
-        matches[index] = converted;
-      }
-    }
-    return matches[index];
-  });
-
-  return result;
 };
 
 RustyTools.isEnabled = function(xpathOrJQuery) {
@@ -144,4 +90,3 @@ RustyTools.isEnabled = function(xpathOrJQuery) {
   }
   return enabled;
 };
-

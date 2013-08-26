@@ -1,11 +1,11 @@
-window['RustyTools'] || (RustyTools = {});
+window['RustyTools'] || (window['RustyTools'] = RustyTools = {});
 
 // Functional support
 // Chain to the clobal object so RustyTools.Fn can be the context for function calls
 RustyTools.Fn = RustyTools.wrapObject(self);
 
 // Reduce implementation derived from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
-if (RustyTools.test || 'function' !== typeof Array.prototype.reduce) {
+if (RustyTools.cfg.test || 'function' !== typeof Array.prototype.reduce) {
 	RustyTools.Fn._testableReduce = function(reduceRight, array, callback, opt_initialValue) {
 	  var undef;
 	  if (null === array || undef === array) {
@@ -61,7 +61,7 @@ if ('function' !== typeof Array.prototype.reduce) {
 // Map implementation derived from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/Map
 // Production steps of ECMA-262, Edition 5, 15.4.4.19
 // Reference: http://es5.github.com/#x15.4.4.19
-if (RustyTools.test || !Array.prototype.map) {
+if (RustyTools.cfg.test || !Array.prototype.map) {
 	RustyTools.Fn._testableMap = function(array, callback, opt_thisArg) {
 	
 	  if (array == null) {
