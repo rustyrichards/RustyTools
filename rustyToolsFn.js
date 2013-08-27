@@ -143,20 +143,19 @@ RustyTools.Fn.ordering = function(fnLessThan, opt_fnThisObj) {
   }
 };
 
-// Chaining to be able to call successive filter functions sort of like chaining off of an object.
-RustyTools.Fn.chain = function(initialValue) {
-  function FnChainer(initialValue) {
-    this.$ = initialValue;
-  };
-  FnChainer.prototype = RustyTools.Fn;
-  FnChainer.prototype._ = function(fn /*, ... */) {
-    for (var i=0; i<arguments.length; i++) {
-      if (!Array.isArray(this.$)) this.$ = [this.$];
-      this.$ = arguments[i].apply(this, this.$);
-    }
-    return this;
-  }
-  // Just use .$ to get the value
+// Make a function that successively runs the passed in functions (like piping together filters.)
+RustyTools.Fn.compose = function(/* function, ... */) {
+	var toApply =  Array.prototype.slice.call(arguments, 0);
 
-  return new FnChainer(initialValue);
+	// The returned function will take an arbitrary number of paramters, and it will keep sending
+	// the output of one function to the input of the next.
+	return function(/* ... */) {
+		var results =  Array.prototype.slice.call(arguments, 0);
+		for (var i=0; i<toApply.length; i++) {
+			if (Array.isArray(results)) results = toApply[i].apply(null, results);
+			else results = toApply[i].call(null, results);
+		}
+
+		return results;
+	}
 };

@@ -52,7 +52,7 @@ RustyTools.Fn.__test = function(t, r) {
     'RustyTools.Fn.chain',
     function(t, r) {
       // Use RustyTools.Fn.ordering to sort odd numbers after even numbers
-      var str = RustyTools.Fn.chain(7)._(function(x){ return x + 3}, function(x) {return x + ' is ten.'}).$;
+      var str = RustyTools.Fn.compose(function(x){ return x + 3}, function(x) {return x + ' is ten.'})(7);
       return r.same(str, '10 is ten.');
     }
   ]);
