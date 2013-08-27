@@ -55,9 +55,10 @@ RustyTools.Testing.__test = function(t, r) {
   );
 
   // Force testAllWhenAvailable to wait for the dynamically created span. (below)
-  tester.testAllWhenAvailable('//body//span', 1000, afterReady, testArray);
+  tester.testAllWhenAvailable('#placeholderSpan', 1000, afterReady, testArray);
 
   var el = document.createElement('span');
+  el.id = 'placeholderSpan'
   document.body.appendChild(el);
 
 }

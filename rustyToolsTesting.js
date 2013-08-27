@@ -117,7 +117,7 @@ RustyTools.Testing.Record.prototype.different = function(a, b) {
   if (a && !(a instanceof String) && a.length && (a.length == b.length)) {
     same = true;
     for (var i=0; !same && i<a.length; i++) same = a[i] == b[i];
-    if (!same) a = ! b = true;
+    if (!same) a = !( b = true);
   }
   if (a == b) {
     this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.differentFail, a, b));
@@ -205,19 +205,22 @@ RustyTools.Testing.prototype.test = function(toTest) {
 };
 
 RustyTools.Testing.prototype.testAllInternal_ = function(parentObj, visited) {
-  visited[parentObj] = true;
+  visited.push(parentObj);
 
   for (var key in parentObj) {
-    // To test this should be a constructor or an object.
-    var obj = parentObj[key];
-    var type = typeof obj;
-    if (obj && ('function' == type || 'object' == type) &&
-        obj.hasOwnProperty(this.cfg.name)) {
-      this.test(obj[this.cfg.name]);
+    if (parentObj.hasOwnProperty && parentObj.hasOwnProperty(key)) {
+      // To test this should be a constructor or an object.
+      var obj = parentObj[key];
+      var type = typeof obj;
+      if (obj && ('function' == type || 'object' == type) &&
+          obj.hasOwnProperty && obj.hasOwnProperty(this.cfg.name) &&
+          (-1 == visited.indexOf(obj))) {
+        this.test(obj[this.cfg.name]);
 
-      // If this has not already handled obj, walk its children looking for more
-      // testable objects.
-      if (!visited[obj]) this.testAllInternal_(obj, visited);
+        // If this has not already handled obj, walk its children looking for more
+        // testable objects.
+        this.testAllInternal_(obj, visited);
+      }
     }
   }
 
@@ -233,7 +236,7 @@ RustyTools.Testing.prototype.testAllInternal_ = function(parentObj, visited) {
 RustyTools.Testing.prototype.testAll = function() {
   var toTest = (arguments.length) ? arguments : [window];
 
-  for (var i=0; i<toTest.length; i++) this.testAllInternal_(toTest[i], {});
+  for (var i=0; i<toTest.length; i++) this.testAllInternal_(toTest[i], []);
   return this;
 };
 
