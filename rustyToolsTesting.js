@@ -204,24 +204,48 @@ RustyTools.Testing.prototype.test = function(toTest) {
   return this;
 };
 
-RustyTools.Testing.prototype.testAllInternal_ = function(parentObj, visited) {
-  visited.push(parentObj);
+RustyTools.Testing.prototype.isTestable = function(obj) {
+  return (obj && obj.hasOwnProperty && obj.hasOwnProperty(this.cfg.name) &&
+        (('function' == typeof obj[this.cfg.name]) ||
+        Array.isArray(obj[this.cfg.name])));
+};
 
-  for (var key in parentObj) {
-    if (parentObj.hasOwnProperty && parentObj.hasOwnProperty(key)) {
-      // To test this should be a constructor or an object.
-      var obj = parentObj[key];
-      var type = typeof obj;
-      if (obj && ('function' == type || 'object' == type) &&
-          obj.hasOwnProperty && obj.hasOwnProperty(this.cfg.name) &&
-          (-1 == visited.indexOf(obj))) {
-        this.test(obj[this.cfg.name]);
+RustyTools.Testing.prototype.testAllInternal_ = function(parentObj) {
+  var objsToTest = [];
+  var lastOttLength = 0;
+  // parentObj may be testable, or maybe its children are testable.
+  if (this.isTestable(parentObj)) {
+    objsToTest.push(parentObj);
+  }
 
-        // If this has not already handled obj, walk its children looking for more
-        // testable objects.
-        this.testAllInternal_(obj, visited);
+  // Walk the tree of testable objects. Don't recures inteate;
+  // JavaScript has a limited stack.
+  //
+  // Iteration method:
+  //  Save the last end of the testable array.
+  //  For each of the new testable items check one level down to see if it has testable items.
+  do {
+    var index = lastOttLength;
+    lastOttLength = objsToTest.length;
+    var toCheck = (lastOttLength) ? objsToTest : [parentObj];
+    while (index < toCheck.length) {
+      obj = toCheck[index];
+      for (var key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          var testObj = obj[key];
+          if (this.isTestable(testObj)) {
+            if (-1 == objsToTest.indexOf(testObj))
+            objsToTest.push(testObj);
+          }
+        }
       }
+      index++;
     }
+  } while (lastOttLength < objsToTest.length);
+
+  // All of the objects in objsToTest have been pre-verified.
+  for (index=0; index<objsToTest.length; index++) {
+    this.test(objsToTest[index][this.cfg.name]);
   }
 
   return this;
@@ -236,7 +260,13 @@ RustyTools.Testing.prototype.testAllInternal_ = function(parentObj, visited) {
 RustyTools.Testing.prototype.testAll = function() {
   var toTest = (arguments.length) ? arguments : [window];
 
-  for (var i=0; i<toTest.length; i++) this.testAllInternal_(toTest[i], []);
+  var trampoline = RustyTools.Fn.buildTrampoline(this);
+
+  // Each individuual call to this.testAllInternal_ takes in a new empty "visited".
+  // so in testAll(A, B, A) A would be testee twice.  (There are cases where this is wanted.  
+  // It may be needed to be sure B does not alter A)  However, as it runs each test the 
+  // "visited" vector is used to check for repeats.
+  for (var i=0; i<toTest.length; i++) this.testAllInternal_(toTest[i]);
   return this;
 };
 
@@ -263,8 +293,10 @@ RustyTools.Testing.prototype.testAllWhenPassed = function(testFn, retryDelay, ca
 // NOTE: use callAfterTestFn instead of chaining because testAllWhenPassed may not finish
 // no the first call!
 RustyTools.Testing.prototype.testAllWhenAvailable = function(xpathOrJQuery, retryDelay, callAfterTestFn) {
-  this.testAllWhenPassed(function(){return RustyTools.isEnabled(xpathOrJQuery);}, retryDelay, callAfterTestFn, 
-      Array.prototype.slice.call(arguments, 2));
+  var params = Array.prototype.slice.call(arguments, 1);
+  params.unshift(function(){return RustyTools.isEnabled(xpathOrJQuery);});
+
+  this.testAllWhenPassed.apply(this, params);
 };
 
 RustyTools.Testing.prototype.toJson = function() {

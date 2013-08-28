@@ -98,6 +98,43 @@ if (!Array.prototype.map) {
   };
 }
 
+// Functional Javascript by Michael Fogus suggested
+// Using a "trampoline" function to handle the JavaScript
+// recusion limit (works as a replacement for tail recursion)
+//
+// To use trampoline, a recursive function should return the
+// next function instead of calling its self.
+// (Note this often means you must bind or return an array of
+// the next function + parameters)
+RustyTools.Fn.buildTrampoline = function(opt_contextObj) {
+	if (!opt_contextObj) opt_contextObj = this;
+
+	// return the trampoline bound to the desired context
+	return function(fn /*, . ... */) {
+		var params = Array.prototype.slice.call(arguments, 1);
+
+		while (fn) {
+			var result = fn.apply(opt_contextObj, params);
+			fn = null;
+			if ('function' == typeof result) {
+				fn = result;
+				result = params = null;
+			} else if (Array.isArray && Array.isArray(result) &&
+					('function' == typeof result[0])) {
+				fn = result[0];
+				params = Array.prototype.slice.call(result, 1);
+				result = null;
+			}
+		}
+
+		return result;
+	}
+};
+
+// Note:  RustyTools.Fn chains from self (the flobal object), so it works as the
+//				context for RustyTools.Fn, and self/window.
+RustyTools.Fn.trampoline = RustyTools.Fn.buildTrampoline(RustyTools.Fn);
+
 // A perdicate function returns !falsy or falsy, but often we want to map that to
 // other prepresentations (usually strings).
 // (Properly the predicate should return true of false, but !falsy and falsy are good enought.)
