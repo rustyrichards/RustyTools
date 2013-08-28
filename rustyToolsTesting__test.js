@@ -68,4 +68,4 @@ function hasNeededTestObjects() {
       RustyTools.__test && RustyTools.Fn.__test && RustyTools.Str.__test && RustyTools.Testing.__test;
 }
 
-RustyTools.waitForCondition(hasNeededTestObjects, doTests)
+RustyTools.waitForCondition(hasNeededTestObjects, doTests);

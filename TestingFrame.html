@@ -17,15 +17,10 @@
 	<body>
 		<div id="report"></div>
 		<script src="rustyTools.js"></script>
-		<script>RustyTools.configure({test: true});</script>
 		<script src="translate.js"></script>
-		<script src="rustyToolsStr.js"></script>
-		<script src="rustyToolsFn.js"></script>
-		<script src="rustyToolsTesting.js"></script>
-		<script src="rustyTools_tester.js"></script>
-		<script src="rustyToolsStr_tester.js"></script>
-		<script src="rustyToolsFn_tester.js"></script>
-		<script src="rustyToolsTesting_tester.js"></script>
+		<script>RustyTools.configure({test: true}); RustyTools.load('RustyTools.Fn', 'RustyTools.Str', 'RustyTools.Tree',
+			'RustyTools.Testing', 'RustyTools.__test', 'RustyTools.Fn.__test', 'RustyTools.Str.__test', 
+			'RustyTools.Testing.__test');</script>
 		<!-- <script src="translate_tester.js"></script> -->
 	</body>
 </html>

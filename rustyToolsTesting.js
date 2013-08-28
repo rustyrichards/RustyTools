@@ -1,4 +1,4 @@
-window['RustyTools'] || (window['RustyTools'] = RustyTools = {});
+RustyTools.load('RustyTools.Str', 'RustyTools.Tree');
 
 RustyTools.configure({
   templateMatchKey: '<-@-/?>',
@@ -82,7 +82,7 @@ RustyTools.Testing.Record.prototype.match = function(expr, str, opt_match) {
   var found = expr.find(str);
   if (opt_match != found[0]) {
     this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.matchFail, expr.toString(),
-        RustyTools.quote(str), RustyTools.quote(found[0]), RustyTools.quote(opt_match)));
+        RustyTools.Str.quote(str), RustyTools.Str.quote(found[0]), RustyTools.Str.quote(opt_match)));
     this.failed = true;
   }
 };
@@ -92,7 +92,7 @@ RustyTools.Testing.Record.prototype.noMatch = function(expr, str) {
   var found = expr.find(str);
   if (found.length) {
     this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.noMatchFail,
-        expr.toString(), RustyTools.quote(str), RustyTools.quote(found[0])));
+        expr.toString(), RustyTools.Str.quote(str), RustyTools.Str.quote(found[0])));
     this.failed = true;
   }
 };
@@ -211,39 +211,15 @@ RustyTools.Testing.prototype.isTestable = function(obj) {
 };
 
 RustyTools.Testing.prototype.testAllInternal_ = function(parentObj) {
-  var objsToTest = [];
-  var lastOttLength = 0;
-  // parentObj may be testable, or maybe its children are testable.
-  if (this.isTestable(parentObj)) {
-    objsToTest.push(parentObj);
-  }
-
-  // Walk the tree of testable objects. Don't recures inteate;
-  // JavaScript has a limited stack.
-  //
-  // Iteration method:
-  //  Save the last end of the testable array.
-  //  For each of the new testable items check one level down to see if it has testable items.
-  do {
-    var index = lastOttLength;
-    lastOttLength = objsToTest.length;
-    var toCheck = (lastOttLength) ? objsToTest : [parentObj];
-    while (index < toCheck.length) {
-      obj = toCheck[index];
-      for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          var testObj = obj[key];
-          if (this.isTestable(testObj)) {
-            if (-1 == objsToTest.indexOf(testObj))
-            objsToTest.push(testObj);
-          }
+  var objsToTest = RustyTools.Tree.findMatchingDescendants(parentObj, this.isTestable.bind(this),
+      function(obj) {
+        var childObjects = [];
+        for (var i in obj) {
+          if (obj.hasOwnProperty(i)) childObjects.push(obj[i]);
         }
-      }
-      index++;
-    }
-  } while (lastOttLength < objsToTest.length);
+        return childObjects;
+      });
 
-  // All of the objects in objsToTest have been pre-verified.
   for (index=0; index<objsToTest.length; index++) {
     this.test(objsToTest[index][this.cfg.name]);
   }
@@ -260,8 +236,6 @@ RustyTools.Testing.prototype.testAllInternal_ = function(parentObj) {
 RustyTools.Testing.prototype.testAll = function() {
   var toTest = (arguments.length) ? arguments : [window];
 
-  var trampoline = RustyTools.Fn.buildTrampoline(this);
-
   // Each individuual call to this.testAllInternal_ takes in a new empty "visited".
   // so in testAll(A, B, A) A would be testee twice.  (There are cases where this is wanted.  
   // It may be needed to be sure B does not alter A)  However, as it runs each test the 
@@ -272,27 +246,26 @@ RustyTools.Testing.prototype.testAll = function() {
 
 // Test once testFn has passed.
 // NOTE: use callAfterTestFn instead of chaining because testAllWhenPassed may not finish
-// no the first call!
-RustyTools.Testing.prototype.testAllWhenPassed = function(testFn, retryDelay, callAfterTestFn) {
-  if (testFn()) {
-    if ((arguments.length > 4)  || (!(arguments[3] instanceof Array))) {
-      this.testAll.apply(this, Array.prototype.slice.call(arguments, 3));
-    } if (arguments.length > 3) {
-      // In the setTimeout bind, the remaining paramters became an array when the bind was called. 
-      this.testAll.apply(this, arguments[3]);
-    }
-
-    if (callAfterTestFn) callAfterTestFn();
-  } else if (retryDelay) {
-    setTimeout(this.testAllWhenPassed.bind(this, testFn, retryDelay, callAfterTestFn, 
-        Array.prototype.slice.call(arguments, 3)), retryDelay);
+// on the first call!
+RustyTools.Testing.prototype.testAllWhenPassed = function(fnTest, retryDelay, fnCallAfterTest /* testAll args */) {
+  var context = this;
+  var params = [];
+  if ((arguments.length > 4)  || (!(arguments[3] instanceof Array))) {
+    params = Array.prototype.slice.call(arguments, 3);
+  } if (arguments.length > 3) {
+    params = [arguments[3]];
   }
+
+  RustyTools.waitForCondition(fnTest, function() {
+    context.testAll.apply(context, params);
+    if (fnCallAfterTest) fnCallAfterTest();
+  }, retryDelay);
 };
 
 // Test once testFn has passed
-// NOTE: use callAfterTestFn instead of chaining because testAllWhenPassed may not finish
+// NOTE: use fnCallAfterTest instead of chaining because testAllWhenPassed may not finish
 // no the first call!
-RustyTools.Testing.prototype.testAllWhenAvailable = function(xpathOrJQuery, retryDelay, callAfterTestFn) {
+RustyTools.Testing.prototype.testAllWhenAvailable = function(xpathOrJQuery, retryDelay, fnCallAfterTest) {
   var params = Array.prototype.slice.call(arguments, 1);
   params.unshift(function(){return RustyTools.isEnabled(xpathOrJQuery);});
 

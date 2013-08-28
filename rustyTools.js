@@ -51,9 +51,21 @@ RustyTools.configure = function(/* config object(s) */) {
   return this;
 };
 
+{
+  // Get the path to this script file
+  var scripts = document.getElementsByTagName('script');
+  var scriptDir = '';
+  var i = scripts.length;
+  while (!scriptDir && i--) {
+    var path = scripts[i].src;
+    if (-1 != path.search(/RustyTools.js$/i)) {
+      scriptDir = path.split('/').slice(0, -1).join('/')+'/';
+    }
+  }
 
-// Configure once RustyTools.configure is set. 
-RustyTools.configure({stringQuote: '"'});
+  // Configure once RustyTools.configure is set. 
+  RustyTools.configure({stringQuote: '"', rustyScriptPath: scriptDir});
+}
 
 /*
  * RustyTools.wrapObject uses prototype inheritance to make a wrapper around
@@ -90,3 +102,45 @@ RustyTools.isEnabled = function(xpathOrJQuery) {
   }
   return enabled;
 };
+
+// Load any other one of the RustyTools...
+RustyTools.getUri = function(rustyToolsObjName) {
+  var fileName = rustyToolsObjName.replace(/\./g, '');
+  return  RustyTools.cfg.rustyScriptPath + fileName + '.js';
+};
+
+// Load any other one of the RustyTools...  Pass in the full object name
+// to the top level object you need (e.g. RustyTools.Fn.__test)
+//
+// Note: The script will load and complete as the DOM handles it.
+//       This does not try to take the place of ATM; it does nothing to 
+//        control the time the execution of the script is started.
+RustyTools.load = function(rustyToolsObjName /* ... */) {
+  for (var i=0; i<arguments.length; i++) {
+    if (!RustyTools[arguments[i]]) {
+      var script = document.createElement('script');
+      script.setAttribute("type","text/javascript");
+      script.setAttribute("src", RustyTools.getUri(arguments[i]));
+      document.getElementsByTagName("head")[0].appendChild(script);
+    }
+  }
+};
+
+// Wait until fmCondition passes then call fnCallback.  This is usefull for
+// waiting until all modules are loaded, or for waiting until a DOM object is
+// available.
+//
+// Note:  the timer keeps running until fmCondition is met, so don't start a lot
+//        of these that may not finish.
+RustyTools.waitForCondition = function(fmCondition, fnCallback, opt_interval) {
+  if (fmCondition()) {
+    fnCallback();
+  } else {
+    var intervalTimer = self.setInterval(function() {
+      if (fmCondition()) {
+        self.clearInterval(intervalTimer);
+        fnCallback();
+      }
+    }, opt_interval || 50);
+  }
+}
