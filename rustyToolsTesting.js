@@ -109,7 +109,7 @@ RustyTools.Testing.Record.prototype.same = function(a, b) {
     this.failed = true;
   }
 };
-
+  
 RustyTools.Testing.Record.prototype.different = function(a, b) {
   this.tested = true;
 
@@ -129,7 +129,7 @@ RustyTools.Testing.Record.prototype.not = function(a) {
   this.tested = true;
   if (a) {
     this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.notFail, a));
-    return false;
+    this.failed = true;
   }
 };
 

@@ -48,7 +48,6 @@ RustyTools.configure = function(/* config object(s) */) {
   var callParams = Array.prototype.slice.call(arguments, 0);
   callParams.unshift(this.cfg);
   this.cfg = RustyTools.cloneOneLevel.apply(this, callParams);
-  return this;
 };
 
 {
@@ -116,14 +115,23 @@ RustyTools.getUri = function(rustyToolsObjName) {
 //       This does not try to take the place of ATM; it does nothing to 
 //        control the time the execution of the script is started.
 RustyTools.load = function(rustyToolsObjName /* ... */) {
+  var needsToLoad = false;
   for (var i=0; i<arguments.length; i++) {
-    if (!RustyTools[arguments[i]]) {
+    var keys = arguments[i].split('.');
+    var obj = self;
+    for (var j=0; obj && j<keys.length; j++) {
+      obj = obj[keys[j]];
+    }
+
+    if (!obj) {
       var script = document.createElement('script');
       script.setAttribute("type","text/javascript");
       script.setAttribute("src", RustyTools.getUri(arguments[i]));
       document.getElementsByTagName("head")[0].appendChild(script);
+      needsToLoad = true;
     }
   }
+  return needsToLoad;
 };
 
 // Wait until fmCondition passes then call fnCallback.  This is usefull for
@@ -133,9 +141,11 @@ RustyTools.load = function(rustyToolsObjName /* ... */) {
 // Note:  the timer keeps running until fmCondition is met, so don't start a lot
 //        of these that may not finish.
 RustyTools.waitForCondition = function(fmCondition, fnCallback, opt_interval) {
+  var mustWait = false;
   if (fmCondition()) {
     fnCallback();
   } else {
+    mustWait = true;
     var intervalTimer = self.setInterval(function() {
       if (fmCondition()) {
         self.clearInterval(intervalTimer);
@@ -143,4 +153,6 @@ RustyTools.waitForCondition = function(fmCondition, fnCallback, opt_interval) {
       }
     }, opt_interval || 50);
   }
-}
+
+  return mustWait;
+};

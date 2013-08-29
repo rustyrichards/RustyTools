@@ -1,3 +1,14 @@
+
+function isOdd(x) {
+  function isOddRecursive(x) {
+    return isOdd(x-2);
+  };
+
+  // The Fibonacci sequence
+  if (x<2) return 1 == x;
+  return isOddRecursive.bind(null, x);
+};
+
 RustyTools.Fn.__test = function(t, r) {
   // .Fn level RustyTools methods
   t.test([
@@ -31,6 +42,11 @@ RustyTools.Fn.__test = function(t, r) {
       var right = RustyTools.Fn._testableReduce(true, testArray, function(x, y) {return x});
       return r.same(right, 4);
     },
+    'RustyTools.Fn.trampoline',
+    function(t, r) {
+      var result = RustyTools.Fn.trampoline(isOdd, 10000);
+      return r.not(result);
+    },
     'RustyTools.Fn.partialApplication',
     function(t, r) {
       // Use partialApplication to make a function to parse base 2 numbers, and map that to an
@@ -49,7 +65,7 @@ RustyTools.Fn.__test = function(t, r) {
       }))
       return r.same(sorted, [2, 4, 6, 1, 3, 5]);
     },
-    'RustyTools.Fn.chain',
+    'RustyTools.Fn.compose',
     function(t, r) {
       // Use RustyTools.Fn.ordering to sort odd numbers after even numbers
       var str = RustyTools.Fn.compose(function(x){ return x + 3}, function(x) {return x + ' is ten.'})(7);

@@ -34,7 +34,43 @@ RustyTools.__test = function(t, r) {
     },
     function(t, r) {r.same(RustyToolsTest.cfg.templateMatchKey, '<-@-/?>');},
     function(t, r) {r.not(RustyTools.cfg.x_test);},
-    function(t, r) {r.different(RustyTools.cfg.x_test, RustyToolsTest.cfg.x_test);}
+    function(t, r) {r.different(RustyTools.cfg.x_test, RustyToolsTest.cfg.x_test);},
+
+    'RustyTools.getUri,  RustyTools.load && RustyTools.waitForCondition',
+    function(t, r) {
+      var needsToLoad = RustyTools.load("RustyTools.Empty");
+      if (needsToLoad) {
+        RustyTools.waitForCondition(function(){
+          return !!RustyTools.Empty;
+        }, function() {
+          // Should not need to load again!
+          // This was an asyncronous callback, so run .test to test and show the results.
+          t.test([
+            'RustyTools.getUri,  RustyTools.load && RustyTools.waitForCondition',
+            function(t, r) {r.not(RustyTools.load("RustyTools.Empty"));}
+          ]); 
+        });
+      } else {
+        // Already loaded
+        r.not(!(RustyToolsTest.Empty));
+      }
+    },
+
+    'RustyTools.RustyTools.isEnabled',
+    function(t, r) {
+      // Checking the id=report should always work
+      r.not(!RustyTools.isEnabled('#report'));
+    },
+    function(t, r) {
+      // This will fail in I.E.  I.E. does not have the xpath "evaluate"
+
+      // Xpath to the first div.  
+      r.not(!RustyTools.isEnabled('//div'));
+    },
+    function(t, r) {
+      // search by class. This will fail if jquery, or some other $ implementatuion is not loaded.
+      r.not(!RustyTools.isEnabled('.report-style'));
+    },
   ]);
 };
 

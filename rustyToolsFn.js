@@ -118,7 +118,8 @@ RustyTools.Fn.buildTrampoline = function(opt_contextObj) {
       fn = null;
       if ('function' == typeof result) {
         fn = result;
-        result = params = null;
+        result = null;
+        params = [];
       } else if (Array.isArray && Array.isArray(result) &&
           ('function' == typeof result[0])) {
         fn = result[0];
