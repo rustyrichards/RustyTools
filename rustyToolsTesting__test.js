@@ -13,21 +13,31 @@ RustyTools.Testing.__test = function(t, r) {
       result && r.same(result.length, 1);
     },
 
-    'String.prototype.templateReplace & String.prototype.templateCleanup',
+    'Failure tests.  Make sure each kind of failure reports correctly\n' +
+    'RustyTools.Testing.Record.match failure',
     function(t, r) {
-      var result = '<div class="<-class-/>"></div>'.templateReplace(
-          'class', 'test-class');
-      r.different('<div class="<-class-/>"></div>', result) &&
-          r.same('<div class="test-class"></div>', result)
+      // Fail match to report the error.
+      r.match(/^[\s\S]*$/, 'abc', 'bc');
     },
+    'RustyTools.Testing.Record.noMatch failure',
     function(t, r) {
-      var result = '<div><-content-/></div>'.templateReplace(
-          'content', 'content 1<br/>', r.ue);
-      result = result.templateReplace(
-          'content', 'content 2<br/>', r.ue);
-      result = result.templateCleanup();
-      r.different('<div class="<-class-/>"></div>', result) &&
-          r.same('<div>content 1<br/>content 2<br/></div>', result)
+      // Fail noMatch to report the error.
+      r.noMatch(/[a-z]+/i, 'abc');
+    },
+    'RustyTools.Testing.Record.same failure',
+    function(t, r) {
+      // Fail same to report the error.
+      r.same('abc', 'def');
+    },
+    'RustyTools.Testing.Record.different failure',
+    function(t, r) {
+      // Fail different to report the error.
+      r.different('abc', 'abc');
+    },
+    'RustyTools.Testing.Record.not failure',
+    function(t, r) {
+      // Fail not to report the error.
+      r.not(true);
     }
   ]);
 };
@@ -44,12 +54,12 @@ function doTests() {
   ]};
 
   var afterReady = tester.buildDom.bind(tester, 
-          '<div class="testFrame <-type-/>"><h1><-type-/> - <-count-/></h1><-content-/></div>',
-          '<div class="description"><-description-/></div>'+
-          '<div class="test"><-test-/>'+
-            '<div class="log"><-log-/></div>'+
-            '<div class="error"><-error-/></div>'+
-            '<div class="exception"><-exception-/></div>'+
+          '<div class="testFrame <#type/>"><h1><#type/> - <#count/></h1><#content/></div>',
+          '<div class="description"><#description/></div>'+
+          '<div class="test"><#test/>'+
+            '<div class="log"><#log/></div>'+
+            '<div class="error"><#error/></div>'+
+            '<div class="exception"><#exception/></div>'+
           '</div>',
           document.getElementById('report')
   );

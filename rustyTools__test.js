@@ -17,7 +17,6 @@ RustyTools.__test = function(t, r) {
     },
     function(t, r) {r.same(RustyToolsTest.cfg.y_test[0], 'a');},
     function(t, r) {r.same(RustyToolsTest.cfg.y_test[3], false);},
-    function(t, r) {r.same(RustyToolsTest.cfg.templateMatchKey, '<-@-/?>');},
     function(t, r) {
       RustyToolsTest.configure({y_test: ['c', 'd']});
       // y_test: should now be ['a', 'b', 3.3, false, 'c, 'd]
@@ -27,16 +26,22 @@ RustyTools.__test = function(t, r) {
 
     'RustyTools.wrapObject',
     function(t, r) {
-      // var RustyToolsTest = RustyTools.wrapObject(RustyTools);
-      // r.e previous r.st altered RustyToolsTest.  Make sure RustyToolsTest
-      // is modified, but RustyTools is not.
-      r.same(RustyTools.cfg.templateMatchKey, '<-@-/?>');
+      r.not(RustyTools.cfg.x_test).different(RustyTools.cfg.x_test, RustyToolsTest.cfg.x_test);
     },
-    function(t, r) {r.same(RustyToolsTest.cfg.templateMatchKey, '<-@-/?>');},
-    function(t, r) {r.not(RustyTools.cfg.x_test);},
-    function(t, r) {r.different(RustyTools.cfg.x_test, RustyToolsTest.cfg.x_test);},
 
-    'RustyTools.getUri,  RustyTools.load && RustyTools.waitForCondition',
+    'RustyTools.RustyTools.getUri',
+    function(t, r) {
+      var uri = RustyTools.getUri('RustyTools.__test');
+      // Find this script and make sure the paths match.
+      var scripts = document.getElementsByTagName('script');
+      var scriptSrc = '';
+      var i = scripts.length;
+      while (scriptSrc != uri && i--) scriptSrc = scripts[i].src;
+
+      r.same(scriptSrc, uri);
+    },
+
+    'RustyTools.load && RustyTools.waitForCondition',
     function(t, r) {
       var needsToLoad = RustyTools.load("RustyTools.Empty");
       if (needsToLoad) {
@@ -46,7 +51,7 @@ RustyTools.__test = function(t, r) {
           // Should not need to load again!
           // This was an asyncronous callback, so run .test to test and show the results.
           t.test([
-            'RustyTools.getUri,  RustyTools.load && RustyTools.waitForCondition',
+            'RustyTools.getUri, RustyTools.load && RustyTools.waitForCondition',
             function(t, r) {r.not(RustyTools.load("RustyTools.Empty"));}
           ]); 
         });
@@ -56,7 +61,7 @@ RustyTools.__test = function(t, r) {
       }
     },
 
-    'RustyTools.RustyTools.isEnabled',
+    'RustyTools.isEnabled',
     function(t, r) {
       // Checking the id=report should always work
       r.not(!RustyTools.isEnabled('#report'));
@@ -68,9 +73,9 @@ RustyTools.__test = function(t, r) {
       r.not(!RustyTools.isEnabled('//div'));
     },
     function(t, r) {
-      // search by class. This will fail if jquery, or some other $ implementatuion is not loaded.
+      // search by class. This will fail if jquery, or some other -$- implementatuion is not loaded.
       r.not(!RustyTools.isEnabled('.report-style'));
-    },
+    }
   ]);
 };
 

@@ -10,7 +10,7 @@ RustyTools.Str = {
   },
 
   quote: function(str, quote) {
-    if (!quote) quote = RustyTools.stringQuote;
+    if (!quote) quote = RustyTools.cfg.stringQuote;
     var expr = new RegExp(quote, 'g');
     return quote + ((str) ? str.toString() : '').replace(expr, '\\' + quote) + quote;
   },
@@ -19,10 +19,16 @@ RustyTools.Str = {
    * toString - Convert the input parameters to strings.  .
    */
   toString: function(/*...*/) {
+    var undef;
+
     var result = '';
     for (var i=0; i<arguments.length; i++) {
       var arg = arguments[i];
-      if ('function' == typeof arg) {
+      if (undef == arg) {
+        result = 'undefined';
+      } else if (null == arg) {
+        result = 'null';
+      } else if ('function' == typeof arg) {
         result += this.toString(arg());
       } else if (Array.isArray(arg)) {
         for (var j=0; j<arg.length; j++) result += this.toString(arg[j]);
@@ -35,44 +41,54 @@ RustyTools.Str = {
   },
 
   /*
-   * multiReplace - replace @1@, @2@, @3@, etc with the supplied parameters.
-   *                Note: the supplied parameter can be a function; in whihc case it
-   *                is passed the match and index.
+   * multiReplace - replace the taga <#1/> or <#1>...</#1> etc with the supplied parameters.
+   *                To allow for recursive substitution <-#1/> of <-#1>...</-#1> should be used
+   *                inside the content, with one extra '-' added for each substitution level.
+   *                Note: the supplied parameter can be a function; in which case it
+   *                is passed the index, and the content.
+   *
+   *                If substObjs is an array, the substitution is done for each element in the
+   *                array
    */
-  multiReplace: function(str /*, ...*/) {
-    var matches = [];
+  multiReplace: function(str, substObjs, opt_keepSource) {
+    var matches = {};
     var replaceArgs = arguments;
-    var result = str.replace(/@([1-9][0-9]*)@/g, function(match, indexStr) {
-      var index = parseInt(indexStr, 10);
-      if (0<index && index<replaceArgs.length) {
-        if (!matches[index]) {
-          var converted = replaceArgs[index];
-          var undef;
-          switch (converted) {
-            case undef:
-              converted = 'undefined';
-              break;
-            case null:
-              converted = 'null';
-              break;
-            default:
-              try {
-                if ('function' == typeof converted) {
-                  converted = converted(match, index);
-                } else {
-                  converted = converted.toString(10);
-                }
-              } catch (e) {
-                converted = 'falsy';
+    var result = '';
+
+    if (!Array.isArray(substObjs)) substObjs = [substObjs];
+    for (var i=0; i<substObjs.length; i++) {
+      substObj = substObjs[i];
+
+      // Match <#n/> or <#m>...</#n>
+      result += str.replace(/<#([^\/>]+)(?:\/>|>([\s\S]*)<\/#\1>)/g, 
+        function(match, index, content) {
+          var subst = substObj[index];
+          if (subst != null) {
+            if (content) {
+              // Recursively call multireplace on the content
+              // Remove one level of - from <-*n
+              var adjContent = content.replace(/(<\/?-*?)-#([^\/>]+)/g, '$1#$2');
+              // For any recursive calls opt_keepSource should be false or omitted.
+              if (replaceArgs[index] instanceof Object) {
+                matches[index] = this.multiReplace.call(this, adjContent, replaceArgs[index]);
               }
+            } else if (!matches[index]) {
+              matches[index] = RustyTools.Str.toString(subst);
+              if (opt_keepSource) matches[index] += match;
+            }
           }
-          matches[index] = converted;
-        }
-      }
-      return matches[index];
-    });
+          return (matches[index] == null) ? match : matches[index];
+        });
+    }
 
     return result;
+  },
+
+  /*
+   * mulitReplaceCleanup - remove any remaining multiReplace tags
+   */
+  mulitReplaceCleanup: function(str) {
+    return str.replace(/<(-*)#([^\/>]+)(?:\/>|>([\s\S]*)<\/\1#\2>)/g, '');
   },
 
   substitute: function(str, key, value) {
@@ -105,4 +121,3 @@ RustyTools.Str = {
     return result;
   }
 };
-

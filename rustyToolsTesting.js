@@ -1,16 +1,11 @@
 RustyTools.load('RustyTools.Str', 'RustyTools.Tree');
 
 RustyTools.configure({
-  templateMatchKey: '<-@-/?>',
-  templateAppendKey: '<-@-/>',
-  templateMatchAllExpr: /<-[^-\/>]*-\/?>/g,
-  multiReplaceExpr: /@(\d+)/g,
-  testConfig: {name: 'test'},
-  matchFail: '@1@.find(@2@)\n    ==\n@3@\n    not\n@4@',
-  noMatchFail: '@1@.find(@2@)\n    ==\n@3@',
-  sameFail: '@1@\n    is not\n@2@',
-  differentFail: '@1@\n    is \n@2@',
-  notFail: '@1@\n    is not falsy.',
+  matchFail: '<#regex/>.find(<#source/>)\n    ==\n<#match/>\n    not\n<#shouldMatch/>',
+  noMatchFail: '<#regex/>.find(<#source/>)\n    ==\n<#match/>',
+  sameFail: '<#1/>\n    is not\n<#2/>',
+  differentFail: '<#1/>\n    is \n<#2/>',
+  notFail: '<#val/>\n    is not falsy.',
 });
 
 // This can't inherit from RegExp it gives the exception:
@@ -18,19 +13,6 @@ RustyTools.configure({
 // So instead inject "find" to work like "exec", except an array is always returned.
 RegExp.prototype.find = function(str) {
   return this.exec(str) || [];
-};
-
-// Inject template support into String so the normal string constructors will
-// work on the test template strings.
-String.prototype.templateReplace = function(key, replacement, opt_leaveKey) {
-  var exp = new RegExp(RustyTools.cfg.templateMatchKey.replace(/@/, key), 'g');
-
-  return this.replace(exp, replacement + ((opt_leaveKey) ?
-      (RustyTools.cfg.templateAppendKey.replace(/@/, key)) : ''));
-};
-
-String.prototype.templateCleanup = function() {
-  return this.replace(RustyTools.cfg.templateMatchAllExpr, '');
 };
 
 RustyTools.Testing = function(config) {
@@ -81,10 +63,13 @@ RustyTools.Testing.Record.prototype.match = function(expr, str, opt_match) {
 
   var found = expr.find(str);
   if (opt_match != found[0]) {
-    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.matchFail, expr.toString(),
-        RustyTools.Str.quote(str), RustyTools.Str.quote(found[0]), RustyTools.Str.quote(opt_match)));
+    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.matchFail, {regex: expr.toString(),
+        source: RustyTools.Str.quote(str), match: RustyTools.Str.quote(found[0]), 
+        shouldMatch: RustyTools.Str.quote(opt_match)}));
     this.failed = true;
   }
+
+  return this;  // For chaining the tests.
 };
 
 RustyTools.Testing.Record.prototype.noMatch = function(expr, str) {
@@ -92,45 +77,54 @@ RustyTools.Testing.Record.prototype.noMatch = function(expr, str) {
   var found = expr.find(str);
   if (found.length) {
     this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.noMatchFail,
-        expr.toString(), RustyTools.Str.quote(str), RustyTools.Str.quote(found[0])));
+        {regex: expr.toString(), source: RustyTools.Str.quote(str), 
+          match: RustyTools.Str.quote(found[0])}));
     this.failed = true;
   }
+
+  return this;  // For chaining the tests.
 };
 
 RustyTools.Testing.Record.prototype.same = function(a, b) {
   this.tested = true;
   var different = false;
-  if (a && !(a instanceof String) && a.length && (a.length == b.length)) {
+  if (a && ('string' != typeof a) && a.length && (a.length == b.length)) {
     for (var i=0; !different && i<a.length; i++) different = a[i] != b[i];
     if (!different) a = b = true;
   }
   if (a != b) {
-    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.sameFail, a, b));
+    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.sameFail, {1: a, 2: b}));
     this.failed = true;
   }
+
+  return this;  // For chaining the tests.
 };
   
 RustyTools.Testing.Record.prototype.different = function(a, b) {
   this.tested = true;
 
   var same = false;
-  if (a && !(a instanceof String) && a.length && (a.length == b.length)) {
+  if (a && ('string' != typeof a) && a.length && (a.length == b.length)) {
     same = true;
     for (var i=0; !same && i<a.length; i++) same = a[i] == b[i];
     if (!same) a = !( b = true);
   }
   if (a == b) {
-    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.differentFail, a, b));
+    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.differentFail, {1: a, 2: b}));
     this.failed = true;
   }
+
+  return this;  // For chaining the tests.
 };
 
 RustyTools.Testing.Record.prototype.not = function(a) {
   this.tested = true;
   if (a) {
-    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.notFail, a));
+    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.notFail, {val: a}));
     this.failed = true;
   }
+
+  return this;  // For chaining the tests.
 };
 
 
@@ -285,18 +279,17 @@ RustyTools.Testing.prototype.buildDom = function(outerTemplate, template, parent
 
     var items = this.data[reports[i]];
     if (items.length) {
-      contentData += outerTemplate.templateReplace('type', reports[i]).
-          templateReplace('count', items.length.toString(10));
-
-      var content = '';
+      var contentStr = '';
       for (var j=0; j<items.length; j++) {
-        content += items[j].buildDom(template, lastDescription);
+        contentStr += items[j].buildDom(template, lastDescription);
         lastDescription = items[j].description;
       }
+
+      contetnStr = RustyTools.Str.multiReplace(template, items);
       // Fill in the content.
-      contentData = contentData.templateReplace('content', content).
-          // Replace any unfilled substitutions
-          templateCleanup();
+      // Replace any unfilled substitutions
+      contentData += RustyTools.Str.mulitReplaceCleanup(RustyTools.Str.multiReplace(
+          outerTemplate, {type: reports[i], count: items.length.toString(10), content: contentStr}));
     }
   }
 
@@ -306,12 +299,13 @@ RustyTools.Testing.prototype.buildDom = function(outerTemplate, template, parent
 };
 
 RustyTools.Testing.Record.prototype.buildDom = function(template, lastDescription) {
-  return template.templateReplace('description',
-      (lastDescription != this.description) ?
-      RustyTools.Str.entitize(this.description) : '').
-      templateReplace('test', RustyTools.Str.entitize(this.test)).
-      templateReplace('log', RustyTools.Str.entitize(this.log, true)).
-      templateReplace('error', RustyTools.Str.entitize(this.error)).
-      templateReplace('exception', RustyTools.Str.entitize(this.exception));
+  return RustyTools.Str.multiReplace(template, {description:
+      ((lastDescription != this.description) ?
+      RustyTools.Str.entitize(this.description) : ''),
+      test: RustyTools.Str.entitize(this.test),
+      log: RustyTools.Str.entitize(this.log, true),
+      error: RustyTools.Str.entitize(this.error),
+      exception: RustyTools.Str.entitize(this.exception)
+  });
 };
 
