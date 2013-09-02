@@ -23,18 +23,20 @@ RustyTools.Str = {
 
     var result = '';
     for (var i=0; i<arguments.length; i++) {
-      var arg = arguments[i];
-      if (undef == arg) {
-        result = 'undefined';
-      } else if (null == arg) {
-        result = 'null';
-      } else if ('function' == typeof arg) {
-        result += this.toString(arg());
-      } else if (Array.isArray(arg)) {
-        for (var j=0; j<arg.length; j++) result += this.toString(arg[j]);
-      } else {
-        result += arg.toString(10);
-      }
+      try {
+        var arg = arguments[i];
+        if (undef == arg) {
+          result = 'undefined';
+        } else if (null == arg) {
+          result = 'null';
+        } else if ('function' == typeof arg) {
+          result += this.toString(arg());
+        } else if (Array.isArray(arg)) {
+          for (var j=0; j<arg.length; j++) result += RustyTools.Str.toString(arg[j]);
+        } else {
+          result += arg.toString(10);
+        }
+      } catch (e) {RustyTools.logException(e);}
     }
 
     return result;

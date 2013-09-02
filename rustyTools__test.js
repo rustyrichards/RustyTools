@@ -9,6 +9,40 @@ RustyTools.__test = function(t, r) {
   // Top level RustyTools methods
   t.test([
     'RustyTools.__test\n' +
+    'RustyTools.log',
+    function(t, r) {
+      // Stub out console.log so we can see the results
+      var resultString = '';
+      self.console = {log: function() {
+        for (var i=0; i<arguments.length; i++) {
+          resultString += arguments[i].toString(10) + '\n';
+        }
+      }}
+
+      RustyTools.log("One", "Two");
+      r.same(resultString, "One\nTwo\n");
+    },
+
+    'RustyTools.logException',
+    function(t, r) {
+      // RE-replace the console.log stup so that we have a new closure
+      // to a new resultString.
+      var resultString = '';
+      self.console = {log: function() {
+        for (var i=0; i<arguments.length; i++) {
+          resultString += arguments[i].toString(10) + '\n';
+        }
+      }}
+
+      try {
+        throw { name: "TestException", 
+            message: "This exception was generated for testing."};
+      } catch (e) {RustyTools.logException(e);}
+      
+      r.match(/^This exception was generated for testing\./, resultString,
+          'This exception was generated for testing.');
+    },
+
     'RustyTools.configure && RustyTools.cloneOneLevel (configure calls cloneOneLevel)',
     function(t, r) {
       RustyToolsTest.configure({x_test: "string",

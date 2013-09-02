@@ -40,6 +40,29 @@ RustyTools.cloneOneLevel = function(/* config objects */) {
   return result;
 };
 
+RustyTools.log = function() {
+  // Use the implied "self" so that it can be overridden in testing.
+  // Watch using "self" some system functions (e.g. setInterval) will
+  // throw an exception if called on an overridden globabl object!
+  if (self.console && self.console.log) {
+    for (var i =0; i<arguments.length; i++) self.console.log(arguments[i]);
+  }
+}
+
+RustyTools.logException = function(e) {
+  var errorStr = '';
+  if (e.message) {
+    errorStr = e.message
+  } else if (e.toString) {
+    errorStr = e.toString();
+  }
+  if (e.fileName) errorStr += '  FileName: ' + e.fileName;
+  if (e.lineNumber) errorStr += '  Line: ' + e.lineNumber;
+  if (e.columnNumber) errorStr += '  Col: ' + e.columnNumber;
+
+  RustyTools.log(errorStr);
+};
+
 /**
  * RustyTools.configure will overwrite any matching RustyTools members.
  * Use this for setting and extending configuration variables.
@@ -146,9 +169,9 @@ RustyTools.waitForCondition = function(fmCondition, fnCallback, opt_interval) {
     fnCallback();
   } else {
     mustWait = true;
-    var intervalTimer = self.setInterval(function() {
+    var intervalTimer = setInterval(function() {
       if (fmCondition()) {
-        self.clearInterval(intervalTimer);
+        clearInterval(intervalTimer);
         fnCallback();
       }
     }, opt_interval || 50);

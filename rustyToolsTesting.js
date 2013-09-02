@@ -170,7 +170,13 @@ RustyTools.Testing.prototype.recordTestResults = function(testItem) {
   return this;
 };
 
-RustyTools.Testing.prototype.test = function(toTest) {
+RustyTools.Testing.prototype.test = function(toTest, opt_recursiveCall) {
+  // Backup "self" so it can be stubbed for testing
+  if (opt_recursiveCall) {
+    var oldSelf = self;
+    self = RustyTools.wrapObject(self);    
+  }
+
   if (toTest) {
     var type = typeof toTest;
     switch (type) {
@@ -190,11 +196,17 @@ RustyTools.Testing.prototype.test = function(toTest) {
         } else {
           // A hash or an array; either way test all its members.
           for (var key in toTest) {
-            this.test(toTest[key]);
+            this.test(toTest[key], true);
           }
         }
     }
   }
+
+  if (opt_recursiveCall) {
+    // Restore the old "self"
+    self = oldSelf;
+  }
+
   return this;
 };
 
