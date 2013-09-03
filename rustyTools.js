@@ -6,7 +6,7 @@ Note:   cloneOneLevel will reserence/alias the objects.  This is to prevent infi
 
         RustyTools.cloneOneLevel can not be in the object notation because it must be called - see below.
 **********/
-RustyTools.cloneOneLevel = function(/* config objects */) {
+RustyTools.cloneOneLevel = function(/* objects */) {
   var result = {};
   for (var i=0; i<arguments.length; i++) {
     var toClone = arguments[i];
@@ -33,6 +33,22 @@ RustyTools.cloneOneLevel = function(/* config objects */) {
           } else {
             result[key] = property;
           }
+        }
+      }
+    }
+  }
+  return result;
+};
+
+// simpleObjCopy will alias most objects; numbers will copy;
+RustyTools.simpleObjCopy = function(/* objects */) {
+  var result = {};
+  for (var i=0; i<arguments.length; i++) {
+    var toClone = arguments[i];
+    if (toClone) {
+      for (var key in toClone) {
+        if (toClone.hasOwnProperty(key)) {
+          result[key] = toClone[key];
         }
       }
     }
