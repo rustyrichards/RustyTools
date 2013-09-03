@@ -58,16 +58,20 @@ function doTests() {
     function(t, r) {r.same(1+1, 2);}
   ]};
 
-  var afterReady = tester.buildDom.bind(tester, 
-          '<div class="testFrame <#type/>"><h1><#type/> - <#count/></h1><#content/></div>',
-          '<div class="description"><#description/></div>'+
-          '<div class="test"><#test/>'+
-            '<div class="log"><#log/></div>'+
-            '<div class="error"><#error/></div>'+
-            '<div class="exception"><#exception/></div>'+
-          '</div>',
-          document.getElementById('report')
-  );
+  var afterReady = function() {
+    tester.buildDom( 
+        '<div class="testFrame <#type/>"><h1><#type/> - <#count/></h1><#content/></div>',
+        '<div class="description"><#description/></div>'+
+        '<div class="test"><#test/>'+
+          '<div class="log"><#log/></div>'+
+          '<div class="error"><#error/></div>'+
+          '<div class="exception"><#exception/></div>'+
+        '</div>',
+        document.getElementById('report')
+    );
+    document.getElementById('json').innerHTML = RustyTools.Str.entitize(tester.toJson(), true);
+  };
+
 
   // Force testAllWhenAvailable to wait for the dynamically created span. (below)
   tester.testAllWhenAvailable('#placeholderSpan', 1000, afterReady, testArray);
@@ -83,4 +87,5 @@ function hasNeededTestObjects() {
       RustyTools.__test && RustyTools.Fn.__test && RustyTools.Str.__test && RustyTools.Testing.__test;
 }
 
+// When everything is loaded start the tests!
 RustyTools.waitForCondition(hasNeededTestObjects, doTests);
