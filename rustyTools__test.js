@@ -82,15 +82,19 @@ RustyTools.__test = function(t, r) {
         RustyTools.waitForCondition(function(){
           return !!RustyTools.Empty;
         }, function() {
-          // Should not need to load again!
           // This was an asyncronous callback, so run .test to test and show the results.
           t.test([
             'RustyTools.getUri, RustyTools.load && RustyTools.waitForCondition',
-            function(t, r) {r.not(RustyTools.load("RustyTools.Empty"));}
+            function(t, r) {
+              // In the loaded callback where we waited for "RustyTools.Empty".  
+              // Make usure a second RustyTools.load call returns false.  
+              // (This means the RustyTools.Empty is already loaded.)
+              r.not(RustyTools.load("RustyTools.Empty"));
+            }
           ]); 
         });
       } else {
-        // Already loaded
+        // RustyToolsTest.Empty claims to be loaded - check the object.
         r.not(!(RustyToolsTest.Empty));
       }
     },
@@ -107,7 +111,8 @@ RustyTools.__test = function(t, r) {
       r.not(!RustyTools.isEnabled('//div'));
     },
     function(t, r) {
-      // search by class. This will fail if jquery, or some other -$- implementatuion is not loaded.
+      // NOTE:  This will fail if jquery, or some other -$- implementatuion is not loaded.
+      // search by class.
       r.not(!RustyTools.isEnabled('.report-style'));
     }
   ]);

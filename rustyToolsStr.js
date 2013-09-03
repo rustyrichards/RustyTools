@@ -57,8 +57,13 @@ RustyTools.Str = {
    *
    *                If substObjs is an array, the substitution is done for each element in the
    *                array
+   *
+   *                You usually want the numbers in substObjs to keep increasing.  (This is usefull
+   *                for generating unique IDs)
+   *                If you need the numbers to start the same each time use 
+   *                  opt_doNotChangeSubst = true
    */
-  multiReplace: function(str, substObjs, opt_keepSource) {
+  multiReplace: function(str, substObjs, opt_doNotChangeSubst) {
     var matches = {};
     var replaceArgs = arguments;
     var result = '';
@@ -66,7 +71,8 @@ RustyTools.Str = {
     if (!Array.isArray(substObjs)) substObjs = [substObjs];
     for (var i=0; i<substObjs.length; i++) {
       // We need to keep the source numbers as the substitutions may change the number values.
-      var substObj = RustyTools.simpleObjCopy(substObjs[i]);
+      var substObj = substObjs[i];
+      if (opt_doNotChangeSubst) substObj = RustyTools.simpleObjCopy(substObj);
 
       // Order of replacement matters.
       //  1) do the content matches
@@ -95,7 +101,6 @@ RustyTools.Str = {
               }
             } else if (!matches[index]) {
               matches[index] = RustyTools.Str.toString(substValue);
-              if (opt_keepSource) matches[index] += match;
             }
           }
           return (matches[index] == null) ? match : matches[index];
@@ -107,9 +112,9 @@ RustyTools.Str = {
           var retVal = match;
           if (index in substObj) {
             if ('+' == symbol) {
-              retVal = substObj[index]++;
+              retVal = RustyTools.Str.toString(substObj[index]++);
             } else {
-              retVal = substObj[index];
+              retVal =  RustyTools.Str.toString(substObj[index]);
             }
           }
           return retVal;
@@ -134,25 +139,5 @@ RustyTools.Str = {
           this.substitute(str.substr(pos + key.length), key, value);
     }
     return str;
-  },
-
-  /*
-   * replaceByObj - in Str replace each key with the value.
-   */
-  replaceByObj: function(str /*obj , ...*/) {
-    var result = str;
-    for (var i=1; i<arguments.length; i++) {
-      var arg = arguments[i];
-
-      str.search("W3Schools");
-      var regex 
-      for (var key in arg) {
-        if (arg.hasOwnProperty(key)) {
-          result = this.substitute(result, key, arg[key]);
-        }
-      }
-    }
-
-    return result;
   }
 };

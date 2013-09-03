@@ -17,27 +17,32 @@ RustyTools.Testing.__test = function(t, r) {
     'RustyTools.Testing.Record.match failure',
     function(t, r) {
       // Fail match to report the error.
-      r.match(/^[\s\S]*$/, 'abc', 'bc');
+      r.match(/^[\s\S]*$/, 'abc', 'bc').invertFailed();
+    },
+    'RustyTools.Testing.Record.exactMatch failure',
+    function(t, r) {
+      // Fail exactMatch to report the error.
+      r.exactMatch(/^[a-z]*/, 'abc1').invertFailed();
     },
     'RustyTools.Testing.Record.noMatch failure',
     function(t, r) {
       // Fail noMatch to report the error.
-      r.noMatch(/[a-z]+/i, 'abc');
+      r.noMatch(/[a-z]+/i, 'abc').invertFailed();
     },
     'RustyTools.Testing.Record.same failure',
     function(t, r) {
       // Fail same to report the error.
-      r.same('abc', 'def');
+      r.same('abc', 'def').invertFailed();
     },
     'RustyTools.Testing.Record.different failure',
     function(t, r) {
       // Fail different to report the error.
-      r.different('abc', 'abc');
+      r.different('abc', 'abc').invertFailed();
     },
     'RustyTools.Testing.Record.not failure',
     function(t, r) {
       // Fail not to report the error.
-      r.not(true);
+      r.not(true).invertFailed();
     }
   ]);
 };

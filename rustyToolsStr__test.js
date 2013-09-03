@@ -53,21 +53,38 @@ RustyTools.Str.__test = function(t, r) {
           'Param4: d, Param5: e, Param6: f, Param7: g, Param8: h, ' +
           'Param9: i, Param11: k, all except 10: ' +
           'a,b,3.3,d,e,f,g,h,i,k,l,<#13/>';
-      var replaced2 = RustyTools.Str.multiReplace(source, subst, true);
-      var shouldbe2 = 'Param1: a<#1/>, Param12: l<#12/>, Param2: b<#2/>, Param3: 3.3<#3/>, ' +
-          'Param4: d<#4/>, Param5: e<#5/>, Param6: f<#6/>, Param7: g<#7/>, Param8: h<#8/>, '+
-          'Param9: i<#9/>, Param11: k<#11/>, all except 10: ' +
-          'a<#1/>,b<#2/>,3.3<#3/>,d<#4/>,e<#5/>,f<#6/>,g<#7/>,h<#8/>,i<#9/>,k<#11/>,l<#12/>,<#13/>';
-
-      var filtered = RustyTools.Str.mulitReplaceCleanup(replaced2);
-      r.different(source, replaced1).same(replaced1, shouldbe1).different(source, replaced2).
-          same(replaced2, shouldbe2).same(filtered, shouldbe1.replace(/<#13\/>/g, ''));
+      var filtered = RustyTools.Str.mulitReplaceCleanup(replaced1);
+      r.different(source, replaced1).same(replaced1, shouldbe1).
+        same(filtered, shouldbe1.replace(/<[^>]*>/g, ''));
     },
  
-    'RustyTools.Str.replaceByObj',
-    function(t,r) {
-      var str = RustyTools.Str.replaceByObj('aabbaacccc', {aa: '-test-', cc: '-test2-'});
-      r.same(str, '-test-bb-test--test2--test2-');
+    function(t, r) {
+      var source = '<div class="widget" id="widget<+widgetNo/>">\n' +
+          '<#widgetContent><img src="<-#imgSrc/>">\n</#widgetContent>' +
+          '</div>';
+      var subst = {widgetNo: 1, widgetContent: [
+            {imgSrc: 'test1.png'},
+            {imgSrc: 'test2.png'}
+          ]};
+      var replaced = RustyTools.Str.multiReplace(source, subst);
+      // No remaining <-# or <#, and it should have 2 img tags.
+      r.noMatch(/<-*#/, replaced).match(/(<img src\="test[0-9]\.png">\s*){2}/g, replaced).
+          // Make sure the widgetNo increased
+          same(2, subst.widgetNo).logObjects(replaced);
+    },
+
+    function(t, r) {
+      var source = '<div class="widget" id="widget<+widgetNo/>">\n' +
+        '<#inner>widgetNo keeps increasing: <+widgetNo/>\n</#inner>' +
+        '</div>';
+      var subst = {widgetNo: 1, inner: [{},{},{}]};
+      var subst_unchanged = RustyTools.cloneOneLevel(subst);
+      var replaced1 = RustyTools.Str.multiReplace(source, subst);
+      var replaced2 = RustyTools.Str.multiReplace(source, subst_unchanged, true);
+      // Make sure that useing opt_doNotChangeSubst yeilds the same result string, but
+      // the numbers in subst_unchanged have not incremented.
+      r.same(replaced1, replaced2).different(subst.widgetNo, 1).same(subst_unchanged.widgetNo, 1).
+          logObjects(replaced1);
     }
   ]);
 };

@@ -55,14 +55,24 @@ RustyTools.Testing.Record.prototype.logObjects = function() {
 };
 
 /**
+ * invertFailed - invert the "failed" flag.  This just exist for testing the
+ * test cases.  (Cause a "failed", then use invertFailed so it reports as success.)
+ */
+RustyTools.Testing.Record.prototype.invertFailed = function() {
+  this.failed = !this.failed;
+
+  return this;  // For chaining the tests.
+};
+
+/**
  * Tester functions that will write into Record.
  */
 RustyTools.Testing.Record.prototype.match = function(expr, str, opt_match) {
   this.tested = true;
-  if (!opt_match) opt_match = str;
-
   var found = expr.find(str);
-  if (opt_match != found[0]) {
+  // If opt_match is supplied make sure is is the same as the full find result.
+  // If opt-match is not supplied just make sure that something was found.
+  if ((opt_match) ? (opt_match != found[0]) : !found.length) {
     this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.matchFail, {regex: expr.toString(),
         source: RustyTools.Str.quote(str), match: RustyTools.Str.quote(found[0]), 
         shouldMatch: RustyTools.Str.quote(opt_match)}));
@@ -70,6 +80,11 @@ RustyTools.Testing.Record.prototype.match = function(expr, str, opt_match) {
   }
 
   return this;  // For chaining the tests.
+};
+
+RustyTools.Testing.Record.prototype.exactMatch = function(expr, str) {
+  return this.match(expr, str, str);
+  // Because match chains exactMatch chains
 };
 
 RustyTools.Testing.Record.prototype.noMatch = function(expr, str) {

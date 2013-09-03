@@ -10,9 +10,9 @@ NumberToken.__test = function(t, r) {
       function(t, r) {r.same(number.decimal, '\\.');},
       function(t, r) {r.same(number.exp, '[eE]');},
       function(t, r) {r.same(number.expPrefix, '[+-]?');},
-      function(t, r) {r.match(expr, '6.02e+23');},
-      function(t, r) {r.match(expr, '6.02E23');},
-      function(t, r) {r.match(expr, '1.1e-100');},
+      function(t, r) {r.exactMatch(expr, '6.02e+23');},
+      function(t, r) {r.exactMatch(expr, '6.02E23');},
+      function(t, r) {r.exactMatch(expr, '1.1e-100');},
       function(t, r) {
           // 0 exponent - not a valid number!
           r.noMatch(expr, '1.1e0');},
@@ -31,13 +31,13 @@ NumberToken.__test = function(t, r) {
       function(t, r) {r.same(number.numerals, '[0-9]');},
       function(t, r) {r.not(number.decimal);},
       function(t, r) {r.not(number.exp);},
-      function(t, r) {r.match(expr, '12345467890');},
+      function(t, r) {r.exactMatch(expr, '12345467890');},
       function(t, r) {r.noMatch(expr, 'abcDEF');},
-      function(t, r) {r.match(expr, '3.14', '3');},
+      function(t, r) {r.exactMatch(expr, '3.14', '3');},
       function(t, r) {r.noMatch(expr, '0x12ab');},
       function(t, r) {
           // The integer tokenizer matches octals too. Put the octal matcher first!
-          r.match(expr, '01234567');}
+          r.exactMatch(expr, '01234567');}
   ]);
 
   // Octal constructor
@@ -54,8 +54,8 @@ NumberToken.__test = function(t, r) {
       function(t, r) {r.noMatch(expr, 'abcDEF');},
       function(t, r) {r.match(expr, '8.076', '076');},
       function(t, r) {r.noMatch(expr, '0x12ab');},
-      function(t, r) {r.match(expr, '00');},
-      function(t, r) {r.match(expr, '01234567');}
+      function(t, r) {r.exactMatch(expr, '00');},
+      function(t, r) {r.exactMatch(expr, '01234567');}
   ]);
 
   // Hex constructor
@@ -69,9 +69,9 @@ NumberToken.__test = function(t, r) {
       function(t, r) {r.not(number.decimal);},
       function(t, r) {r.not(number.exp);},
       function(t, r) {r.noMatch(expr, '0x01234546789abcdefgh');},
-      function(t, r) {r.match(expr, '0x01234546789abcdef');},
+      function(t, r) {r.exactMatch(expr, '0x01234546789abcdef');},
       function(t, r) {r.noMatch(expr, 'abcDEF');},
-      function(t, r) {r.match(expr, '0X12AB');}
+      function(t, r) {r.exactMatch(expr, '0X12AB');}
   ]);
 };
 
@@ -85,8 +85,8 @@ SymbolToken.__test = function(t, r) {
       function(t, r) {r.same(symbol.firstChar, '[A-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]');},
       function(t, r) {r.same(symbol.chars, '[\\dA-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]');},
       function(t, r) {r.not(symbol.suffix);},
-      function(t, r) {r.match(expr, 'variable');},
-      function(t, r) {r.match(expr, '_123');},
+      function(t, r) {r.exactMatch(expr, 'variable');},
+      function(t, r) {r.exactMatch(expr, '_123');},
       function(t, r) {r.match(expr, '124@_456:', '_456');}
   ]);
 
@@ -99,8 +99,8 @@ SymbolToken.__test = function(t, r) {
       function(t, r) {r.same(symbol.firstChar, '[A-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]');},
       function(t, r) {r.same(symbol.chars, '[\\dA-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]');},
       function(t, r) {r.not(symbol.suffix);},
-      function(t, r) {r.match(expr, '@memberVar');},
-      function(t, r) {r.match(expr, '@@classVar');},
+      function(t, r) {r.exactMatch(expr, '@memberVar');},
+      function(t, r) {r.exactMatch(expr, '@@classVar');},
       function(t, r) {r.noMatch(expr, '_123');},
       function(t, r) {r.match(expr, '124@_456:', '@_456');}
   ]);
@@ -114,7 +114,7 @@ SymbolToken.__test = function(t, r) {
       function(t, r) {r.same(symbol.firstChar, '[A-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]');},
       function(t, r) {r.same(symbol.chars, '[\\dA-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]');},
       function(t, r) {r.same(symbol.suffix, ':');},
-      function(t, r) {r.match(expr, 'symbol:');},
+      function(t, r) {r.exactMatch(expr, 'symbol:');},
       function(t, r) {r.match(expr, 'symbol:symbol2:', 'symbol:');},
       function(t, r) {r.noMatch(expr, '@@classVar');},
       function(t, r) {r.noMatch(expr, '_123');},
@@ -162,7 +162,7 @@ LiteralToken.__test = function(t, r) {
       function(t, r) {r.same(symbol.prefix, '<!--');},
       function(t, r) {r.not(symbol.escape);},
       function(t, r) {r.same(symbol.suffix, '-->');},
-      function(t, r) {r.match(expr,
+      function(t, r) {r.exactMatch(expr,
           '<html><head><!--<title>Commented out</title>--></head><body></body></html>',
           '<!--<title>Commented out</title>-->');},
       function(t, r) {r.match(expr, '<!---->', '<!---->');},
