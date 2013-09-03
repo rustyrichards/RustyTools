@@ -3,6 +3,7 @@
 	<head>
 		<title>Testing Frame</title>
 		<style>
+		  .report-style {white-space:pre-wrap;}
 		  #report .testFrame  {border-width:5px; border-style:ridge; padding: 5px; margin-bottom: 5px;}
 		  #report .excepted {border-color:#800;}
 		  #report .failed {border-color:#F00;}
@@ -17,9 +18,10 @@
 	<body>
 		<div class="report-style" id="report"></div>
 		<script src="rustyTools.js"></script>
-		<script src="translate.js"></script>
-		<script>RustyTools.configure({test: true}); RustyTools.load('RustyTools.Fn', 'RustyTools.Str', 'RustyTools.Tree',
-			'RustyTools.Testing', 'RustyTools.__test', 'RustyTools.Fn.__test', 'RustyTools.Str.__test', 
+		<script>RustyTools.configure({test: true}); RustyTools.load('RustyTools.Fn', 'RustyTools.Str', 
+			'RustyTools.Tree', 'RustyTools.Translate',
+			'RustyTools.Testing', 'RustyTools.__test', 'RustyTools.Fn.__test', 
+			'RustyTools.Str.__test', 'RustyTools.Translate.__test', 
 			'RustyTools.Testing.__test');</script>
 		<!-- <script src="translate_tester.js"></script> -->
 	</body>

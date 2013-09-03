@@ -10,7 +10,7 @@ RustyTools.Str.__test = function(t, r) {
     },
     function(t,r) {
       var entitized = RustyTools.Str.entitize('<a> & \r\n', true);
-      r.same(entitized, '&lt;a&gt;&nbsp;&amp;&nbsp;\r\n');
+      r.same(entitized, '&lt;a&gt; &amp; \r\n');
     },
 
     'RustyTools.Str.quote',

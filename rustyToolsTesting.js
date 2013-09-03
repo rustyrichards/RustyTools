@@ -328,11 +328,11 @@ RustyTools.Testing.prototype.buildDom = function(outerTemplate, template, parent
 RustyTools.Testing.Record.prototype.buildDom = function(template, lastDescription) {
   return RustyTools.Str.multiReplace(template, {description:
       ((lastDescription != this.description) ?
-      RustyTools.Str.entitize(this.description) : ''),
-      test: RustyTools.Str.entitize(this.test),
+      RustyTools.Str.entitize(this.description, true) : ''),
+      test: RustyTools.Str.entitize(this.test, true),
       log: RustyTools.Str.entitize(this.log, true),
-      error: RustyTools.Str.entitize(this.error),
-      exception: RustyTools.Str.entitize(this.exception)
+      error: RustyTools.Str.entitize(this.error, true),
+      exception: RustyTools.Str.entitize(this.exception, true)
   });
 };
 

@@ -75,28 +75,23 @@ RustyTools.__test = function(t, r) {
       r.same(scriptSrc, uri);
     },
 
-    'RustyTools.load && RustyTools.waitForCondition',
+    'RustyTools.getUri, RustyTools.load, RustyTools.waitForCondition tested with RustyTools.waitForLoad',
     function(t, r) {
-      var needsToLoad = RustyTools.load("RustyTools.Empty");
-      if (needsToLoad) {
-        RustyTools.waitForCondition(function(){
-          return !!RustyTools.Empty;
-        }, function() {
+      var loading  = RustyTools.waitForLoad("RustyTools.Empty",
+        function() {
           // This was an asyncronous callback, so run .test to test and show the results.
           t.test([
-            'RustyTools.getUri, RustyTools.load && RustyTools.waitForCondition',
+            'RustyTools.waitForLoad callback',
             function(t, r) {
-              // In the loaded callback where we waited for "RustyTools.Empty".  
-              // Make usure a second RustyTools.load call returns false.  
-              // (This means the RustyTools.Empty is already loaded.)
+              // RustyTools.Empty should have loaded.
+              // Check this by looking for a false return from RustyTools.load
               r.not(RustyTools.load("RustyTools.Empty"));
             }
           ]); 
         });
-      } else {
-        // RustyToolsTest.Empty claims to be loaded - check the object.
-        r.not(!(RustyToolsTest.Empty));
-      }
+
+      // Loading should be true.
+      r.not(!loading);
     },
 
     'RustyTools.isEnabled',
@@ -111,7 +106,7 @@ RustyTools.__test = function(t, r) {
       r.not(!RustyTools.isEnabled('//div'));
     },
     function(t, r) {
-      // NOTE:  This will fail if jquery, or some other -$- implementatuion is not loaded.
+      // NOTE:  This will fail if jquery, or some other $ implementatuion is not loaded.
       // search by class.
       r.not(!RustyTools.isEnabled('.report-style'));
     }

@@ -6,11 +6,11 @@ RustyTools.Testing.__test = function(t, r) {
     'RegExp.prototype.find',
     function(t, r) {
       var result = expr.find('abc');
-      result && r.same(result.length, 0);
+      r.not(!result).same(result.length, 0);
     },
     function(t, r) {
       var result = expr.find('123');
-      result && r.same(result.length, 1);
+      r.not(!result).same(result.length, 1);
     },
 
     'Failure tests.  Make sure each kind of failure reports correctly\n' +

@@ -1,11 +1,13 @@
 window['RustyTools'] || (window['RustyTools'] = RustyTools = {});
 
 RustyTools.Str = {
-  entitize: function(str, opt_skipLineBreak) {
+  // Use opt_skipWhitespace = true if you are using the CSS white-space rule to 
+  // handle the whitespace.  (white-space:pre-wrap; to make it behave like a text file.)
+  entitize: function(str, opt_skipWhitespace) {
     var str2 = ((str) ? str.toString() : '').replace(/&/g, '&amp;').
         replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&#34;').
-        replace(/ /g, '&nbsp;');
-    if (!opt_skipLineBreak) str2 = str2.replace(/\r\n|\r|\n/g, '<br/>');
+        replace(/\$/g, '&#36;');
+    if (!opt_skipWhitespace) str2 = str2.replace(/ /g, '&nbsp;').replace(/\r\n|\r|\n/g, '<br/>');
     return str2;
   },
 

@@ -147,6 +147,19 @@ RustyTools.getUri = function(rustyToolsObjName) {
   return  RustyTools.cfg.rustyScriptPath + fileName + '.js';
 };
 
+// Convert the name (e.g. "RustyTools.Str") to the object it references.
+// This returns undefined if the object was not found.
+RustyTools.strToObj = function(rustyToolsObjName) {
+  var keys = rustyToolsObjName.split('.');
+  var obj = self;
+  for (var j=0; obj && j<keys.length; j++) {
+    obj = obj[keys[j]];
+  }
+
+  return obj;
+};
+
+
 // Load any other one of the RustyTools...  Pass in the full object name
 // to the top level object you need (e.g. RustyTools.Fn.__test)
 //
@@ -156,11 +169,7 @@ RustyTools.getUri = function(rustyToolsObjName) {
 RustyTools.load = function(rustyToolsObjName /* ... */) {
   var needsToLoad = false;
   for (var i=0; i<arguments.length; i++) {
-    var keys = arguments[i].split('.');
-    var obj = self;
-    for (var j=0; obj && j<keys.length; j++) {
-      obj = obj[keys[j]];
-    }
+    var obj = RustyTools.strToObj(arguments[i]);
 
     if (!obj) {
       var script = document.createElement('script');
@@ -188,10 +197,27 @@ RustyTools.waitForCondition = function(fmCondition, fnCallback, opt_interval) {
     var intervalTimer = setInterval(function() {
       if (fmCondition()) {
         clearInterval(intervalTimer);
-        fnCallback();
+
+        // There doesn't seem to be much point to run the timer and not have a callback,
+        // but fnCallback == null is a valid input.
+        if (fnCallback) fnCallback();
       }
     }, opt_interval || 50);
   }
 
   return mustWait;
+};
+
+// Wait for the RustyTools.load
+RustyTools.waitForLoad = function(rustyToolsObjName, fnCallback, opt_interval) {
+  var loading = RustyTools.load(rustyToolsObjName);
+  if (loading) {
+    RustyTools.waitForCondition(function() {
+      // Return true if the rustyToolsObjName object eists.
+      return !!RustyTools.strToObj(rustyToolsObjName);
+    }, fnCallback, opt_interval);
+  }
+  // else RustyTools.load returns flas means already loaded.
+
+  return loading;
 };

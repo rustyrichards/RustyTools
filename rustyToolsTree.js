@@ -1,5 +1,3 @@
-window['RustyTools'] || (window['RustyTools'] = RustyTools = {});
-
 // Object Tree support
 
 RustyTools.Tree = {
