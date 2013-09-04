@@ -3,28 +3,29 @@
 	<head>
 		<title>Testing Frame</title>
 		<style>
-		  .report-style {white-space:pre-wrap;}
-		  .testFrame  {border-width:5px; border-style:ridge; padding: 5px; margin-bottom: 5px;}
-		  .report-style .excepted {border-color:#800;}
-		  .report-style .failed {border-color:#F00;}
-		  .report-style .passed {border-color:#080;}
-		  .testFrame.json {border-color:#AAA;}
-		  .report-style .description {font-weight:bold;}
-          .report-style .test {margin-bottom: 1em;}
-          .report-style .log {margin-left: 2em; color: #446;}
-          .report-style .error {margin-left: 2em; color: #800;}
-          .report-style .exception {margin-left: 2em; color: #800;}
+			.report-style {white-space:pre-wrap; tab-size:2;}
+			.testFrame  {border-width:5px; border-style:ridge; padding: 5px; margin-bottom: 5px;}
+			.report-style .excepted {border-color:#800;}
+			.report-style .failed {border-color:#F00;}
+			.report-style .passed {border-color:#080;}
+			.testFrame.json {border-color:#AAA;}
+			.report-style .description {font-weight:bold;}
+					.report-style .test {margin-bottom: 1em;}
+					.report-style .log {margin-left: 2em; color: #446;}
+					.report-style .error {margin-left: 2em; color: #800;}
+					.report-style .exception {margin-left: 2em; color: #800;}
 		</style>
 	</head>
 	<body>
 		<div class="report-style" id="report"></div>
 		<div class="testFrame json" id="json"></div>
 		<script src="rustyTools.js"></script>
-		<script>RustyTools.configure({test: true}); RustyTools.load('RustyTools.Fn', 'RustyTools.Str', 
+		<script>RustyTools.configure({test: true}); RustyTools.load(
+			'RustyTools.Fn', 'RustyTools.Str', 
 			'RustyTools.Tree', 'RustyTools.Translate',
 			'RustyTools.Testing', 'RustyTools.__test', 'RustyTools.Fn.__test', 
-			'RustyTools.Str.__test', 'RustyTools.Translate.__test', 
-			'RustyTools.Testing.__test');</script>
+			'RustyTools.Str.__test', 'RustyTools.Tree.__test',  
+			'RustyTools.Translate.__test', 'RustyTools.Testing.__test');</script>
 		<!-- <script src="translate_tester.js"></script> -->
 	</body>
 </html>

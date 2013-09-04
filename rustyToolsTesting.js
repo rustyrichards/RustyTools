@@ -1,11 +1,11 @@
 RustyTools.load('RustyTools.Str', 'RustyTools.Tree');
 
 RustyTools.configure({
-  matchFail: '<#regex/>.find(<#source/>)\n    ==\n<#match/>\n    not\n<#shouldMatch/>',
-  noMatchFail: '<#regex/>.find(<#source/>)\n    ==\n<#match/>',
-  sameFail: '<#1/>\n    is not\n<#2/>',
-  differentFail: '<#1/>\n    is \n<#2/>',
-  notFail: '<#val/>\n    is not falsy.',
+  matchFail: '<#regex/>.find(<#source/>)\n\t==\n<#match/>\n\tnot\n<#shouldMatch/>',
+  noMatchFail: '<#regex/>.find(<#source/>)\n\t==\n<#match/>',
+  sameFail: '<#1/>\n \tis not\n<#2/>',
+  differentFail: '<#1/>\n\tis\n<#2/>',
+  notFail: '<#val/>\n\t is not falsy.',
 });
 
 // This can't inherit from RegExp it gives the exception:
