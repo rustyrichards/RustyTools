@@ -82,8 +82,7 @@ RustyTools.Translator = function(punctuationAndOperators, tokens, languageTreeRo
 	// string into punctuation tokens.
 	var punct = punctuationAndOperators.sort(RustyTools.Translator.reverseAsciibetical).join('\n');
 	// Escape the punctuation that is used by regexp, then convert the \n to the regexp or
-	punct = punct.replace(/(\$|\(|\)|\*|\+|\.|\/|\?|\[|\\|\]|\^|\{|\||\})/g,
-			'\\$1').replace(/\n/g, '|');
+	punct = RustyTools.Str.regExpEscape(punct).replace(/\n/g, '|');
 
 	// NOTE: 0 = invalid, 1 = lineBreak, 2 = whitespace
 	this.tokenTypes = ['invalid'];

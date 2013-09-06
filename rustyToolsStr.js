@@ -141,5 +141,23 @@ RustyTools.Str = {
 					this.substitute(str.substr(pos + key.length), key, value);
 		}
 		return str;
+	},
+
+	regExpEscape: function(str) {
+		return str.replace(/(\$|\(|\)|\*|\+|\.|\/|\?|\[|\\|\]|\^|\{|\||\})/g, '\\$1');
+	},
+
+	getQueryValues: function(str, key) {
+		var expr = new RegExp( '(?:\\?|&)' + RustyTools.Str.regExpEscape(key) + '=([^&]*)', 'g');
+
+		var result = [];
+		var matches
+		while (matches = expr.exec(str)) {
+			if (i < matches.length) result = result.concat(matches.slice(1));
+		}
+
+		if (result.length) result = result.map(decodeURIComponent);
+
+		return result;
 	}
 };

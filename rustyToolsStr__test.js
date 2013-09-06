@@ -85,6 +85,23 @@ RustyTools.Str.__test = function(t, r) {
 			// the numbers in subst_unchanged have not incremented.
 			r.same(replaced1, replaced2).different(subst.widgetNo, 1).same(subst_unchanged.widgetNo, 1).
 					logObjects(replaced1);
+		},
+
+		'RustyTools.Str.regExpEscape',
+		function(t,r) {
+			var testStr = '$()*+./?[\\]^{|}';
+			var regex = new RegExp(RustyTools.Str.regExpEscape(testStr));
+			r.match(regex, testStr);
+		},
+
+		'RustyTools.Str.getParamValues',
+		function(t,r) {
+			var testStr = '?a=testing&multi=one&multi=two&encoded=' + encodeURIComponent('?&=');
+			var a = RustyTools.Str.getQueryValues(testStr, 'a');
+			var multi = RustyTools.Str.getQueryValues(testStr, 'multi');
+			var encoded = RustyTools.Str.getQueryValues(testStr, 'encoded');
+
+			r.same(a, ['testing']).same(multi, ['one', 'two']).same(encoded, ['?&=']);
 		}
 	]);
 };
