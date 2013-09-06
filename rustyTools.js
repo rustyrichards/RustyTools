@@ -141,6 +141,16 @@ RustyTools.isEnabled = function(xpathOrJQuery) {
 	return enabled;
 };
 
+// See if object in indexable.
+RustyTools.isArrayLike = function(object) {
+  try {
+	return 'string' != typeof object && 'number' === typeof object.length;
+  } catch (e) {
+  	// If there it no object.length then it is not not array like.
+  	return false;
+  }
+};
+
 // Load any other one of the RustyTools...
 RustyTools.getUri = function(rustyToolsObjName) {
 	var fileName = rustyToolsObjName.replace(/\./g, '');
@@ -158,7 +168,6 @@ RustyTools.strToObj = function(rustyToolsObjName) {
 
 	return obj;
 };
-
 
 // Load any other one of the RustyTools...  Pass in the full object name
 // to the top level object you need (e.g. RustyTools.Fn.__test)

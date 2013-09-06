@@ -63,6 +63,15 @@ RustyTools.__test = function(t, r) {
 			r.not(RustyTools.cfg.x_test).different(RustyTools.cfg.x_test, RustyToolsTest.cfg.x_test);
 		},
 
+		'RustyTools.isArrayLike',
+		function(t, r) {
+			r.not(RustyTools.isArrayLike(1.1)).					// number is not array like
+				not(RustyTools.isArrayLike('test')).			// string explicitly excluded
+				not(RustyTools.isArrayLike({length: 'foo'})).	// property length is not a number
+				not(!RustyTools.isArrayLike(arguments)).		// arguments is array like
+				not(!RustyTools.isArrayLike([]));				// empty array is array like
+		},
+
 		'RustyTools.RustyTools.getUri',
 		function(t, r) {
 			var uri = RustyTools.getUri('RustyTools.__test');

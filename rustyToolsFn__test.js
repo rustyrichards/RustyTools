@@ -32,6 +32,31 @@ RustyTools.Fn.__test = function(t, r) {
 			return r.same(right, 4);
 		},
 
+		'RustyTools.Fn.propertyWalk',
+		function(t, r) {
+			var t1 = {a: 'a', b: 2, c:{d: 4}};
+
+			var loop = {a: 1, b:2};
+			var loop2 = {x: 3, y: 4};
+			loop.c = loop2;
+			loop.z = loop;
+
+			// Use an array for testing because the key order is implementation dependant.
+			var flattenToArrows = function(result, key, value, keyPath) {
+				if (!result) result = [];
+
+				return result.concat(keyPath.join('->') + '-->' + value); 
+			};
+
+			// Normalize the result order by sorting.
+			var str = RustyTools.Fn.propertyWalk(t1, flattenToArrows).sort().join(' ');
+
+			// The "visited" test will prevent loop2 from going back to loop!
+			var str2 = RustyTools.Fn.propertyWalk(loop, flattenToArrows).sort().join(' ');
+
+			return r.same(str, 'a-->a b-->2 c->d-->4').same(str2, 'a-->1 b-->2 c->x-->3 c->y-->4');
+		},
+
 		'RustyTools.Fn.buildTrampoline && RustyTools.Fn.trampoline',
 		function(t, r) {
 			function isOdd(x) {

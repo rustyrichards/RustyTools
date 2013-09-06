@@ -6,13 +6,13 @@ RustyTools.Fn = RustyTools.wrapObject(self);
 
 // Reduce implementation derived from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
 if (RustyTools.cfg.test || 'function' !== typeof Array.prototype.reduce) {
-	RustyTools.Fn._testableReduce = function(reduceRight, array, callback, opt_initialValue) {
+	RustyTools.Fn._testableReduce = function(reduceRight, array, fnCallback, opt_initialValue) {
 		var undef;
 		if (null === array || undef === array) {
-			throw new TypeError('Array.prototype.reduce called on null or undefined');
+			throw new TypeError('RustyTools.Fn._testableReduce or Array.prototype.reduce called on null or undefined');
 		}
-		if ('function' !== typeof callback) {
-			throw new TypeError(callback + ' is not a function');
+		if ('function' !== typeof fnCallback) {
+			throw new TypeError(fnCallback + ' is not a function');
 		}
 		var value,
 				length = array.length >>> 0,
@@ -28,7 +28,7 @@ if (RustyTools.cfg.test || 'function' !== typeof Array.prototype.reduce) {
 		while ((reduceRight) ? index-- : (++index < length)) {
 			if (O.hasOwnProperty(index)) {
 				if (isValueSet) {
-					value = callback(value, O[index], index, array);
+					value = fnCallback(value, O[index], index, array);
 				} else {
 					value = O[index];
 					isValueSet = true;
@@ -43,14 +43,14 @@ if (RustyTools.cfg.test || 'function' !== typeof Array.prototype.reduce) {
 }
 
 if ('function' !== typeof Array.prototype.reduce) {
-	Array.prototype.reduce = function(callback, opt_initialValue) {
+	Array.prototype.reduce = function(fnCallback, opt_initialValue) {
 		var params = Array.prototype.slice.call(arguments, 0);
 		params.unshift(this);
 		params.unshift(false);
 		return RustyTools._testableReduce.apply(RustyRools, params);
 	};
 
-	Array.prototype.reduceRight = function(callback, opt_initialValue) {
+	Array.prototype.reduceRight = function(fnCallback, opt_initialValue) {
 		var params = Array.prototype.slice.call(arguments, 0);
 		params.unshift(this);
 		params.unshift(true);
@@ -62,14 +62,14 @@ if ('function' !== typeof Array.prototype.reduce) {
 // Production steps of ECMA-262, Edition 5, 15.4.4.19
 // Reference: http://es5.github.com/#x15.4.4.19
 if (RustyTools.cfg.test || !Array.prototype.map) {
-	RustyTools.Fn._testableMap = function(array, callback, opt_thisArg) {
+	RustyTools.Fn._testableMap = function(array, fnCallback, opt_thisArg) {
 	
 		if (array == null) {
-			throw new TypeError('Array.prototype.map called on null or undefined');
+			throw new TypeError('RustyTools.Fn._testableMap or Array.prototype.map called on null or undefined');
 		}
 	
-		if (typeof callback !== "function") {
-			throw new TypeError(callback + " is not a function");
+		if (typeof fnCallback !== "function") {
+			throw new TypeError(fnCallback + " is not a function");
 		}
 	
 		var O = array;
@@ -85,7 +85,7 @@ if (RustyTools.cfg.test || !Array.prototype.map) {
 	
 		// Work from right to make the while slightly faster.
 		while(k--) {
-			if (k in O) result[ k ] = callback.call(T, O[ k ], k, O);
+			if (k in O) result[ k ] = fnCallback.call(T, O[ k ], k, O);
 		}
 	
 		return result;
@@ -93,10 +93,74 @@ if (RustyTools.cfg.test || !Array.prototype.map) {
 }
 
 if (!Array.prototype.map) {
-	Array.prototype.map = function(callback, opt_thisArg) {
-		RustyTools._testableMap(this, callback, opt_thisArg);
+	Array.prototype.map = function(fnCallback, opt_thisArg) {
+		RustyTools._testableMap(this, fnCallback, opt_thisArg);
 	};
 }
+
+// The recurive implementation of propertyWalk
+RustyTools.Fn.propertyWalk_ = function(result, visited, keyPath, object, 
+		fnCallback, thisArg, opt_, fnPropertyWanted) {
+	// RustyTools.Fn.propertyWalk does the parameter validation!
+
+	// Prevent recursive loops
+	if (-1 == visited.indexOf(object)) {
+		visited.push(object);
+
+		for (var key in object) {
+			var value = object[key]
+			if (object.hasOwnProperty(key) && (!fnPropertyWanted || 
+					fnPropertyWanted.call(context, key, value))) {
+				keyPath.push(key);
+				if (!RustyTools.isArrayLike(value) && 'object' == typeof value) {
+					// For child objects recurse.
+					result = this.propertyWalk_(result, visited, keyPath, value, 
+							fnCallback, thisArg, fnPropertyWanted);
+				} else {
+					// For arrays or simple values fnCallback must handle the value
+					result = fnCallback.call(thisArg, result, key, value, keyPath);
+				}
+				keyPath.pop();
+			}
+		}
+	}
+
+	return result;
+};
+
+
+// Kind of like map it is often useefull to walk all the peoperties in an object/hash.
+// The type produced is up to fnCallback.  (propertyWalk could summ all numbers!)
+// and produce a new object.  (The new object can be a string.)
+// fnCallback will receive:
+//		result - the output so far.  The return from fnCallback will replace result.
+//		key - the string name of the property.
+//		value - the value of the property.
+//    keyPath - an array of all the keys from ancestor objects.  (key will be the
+//				last value in the array.) 
+RustyTools.Fn.propertyWalk = function(object, fnCallback, opt_fnPropertyWanted, opt_thisArg) {
+	if (object == null) {
+		throw new TypeError('RustyTools.Fn.propertyWalk called on null or undefined');
+	}
+
+	if (opt_fnPropertyWanted && typeof opt_fnPropertyWanted !== "function") {
+		throw new TypeError(fnPropertyWanted + " is not a function");
+	}
+
+	if (typeof fnCallback !== "function") {
+		throw new TypeError(fnCallback + " is not a function");
+	}
+
+	if (typeof object !== "object") {
+		throw new TypeError(object + " is not an object");
+	}
+
+	var result;	// Result starts with "undefined".
+
+	return this.propertyWalk_(result, [], [], object, fnCallback, 
+			opt_thisArg || null, opt_fnPropertyWanted);
+};
+
 
 // Functional Javascript by Michael Fogus suggested
 // Using a "trampoline" function to handle the JavaScript
