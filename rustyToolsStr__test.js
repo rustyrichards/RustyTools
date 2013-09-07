@@ -102,6 +102,21 @@ RustyTools.Str.__test = function(t, r) {
 			var encoded = RustyTools.Str.getQueryValues(testStr, 'encoded');
 
 			r.same(a, ['testing']).same(multi, ['one', 'two']).same(encoded, ['?&=']);
+		},
+
+		'RustyTools.Str.toPlainText',
+		function(t,r) {
+			var str = RustyTools.Str.toPlainText(
+					'<a href="keep this">text in the anchor</a><br>' +
+					'test<img src="keep this">text after the img<br>' +
+					'<a href=#>discard the # link</a><br>' +
+					'&lt;Testing &#34;RustyTools.Str.toPlainText&#34;&nbsp;&#36;&gt;'
+			);
+
+			r.same(str, 'keep this text in the anchor\n' +
+					'test keep this text after the img\n' +
+					'discard the # link\n' +
+					'<Testing "RustyTools.Str.toPlainText"\u00A0$>');
 		}
 	]);
 };

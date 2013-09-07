@@ -17,6 +17,7 @@ RustyTools.Xhr = {
 		reqType: 'GET',
 		dataType: 'text/json',
 		async: true,
+		callbackContext: null,
 		onSuccessCallback: null,
 		onFailureCallback: null,
 		onXMLHttpRequestLoadError: null,
@@ -56,9 +57,11 @@ RustyTools.Xhr = {
 						//case "text/plain" and all others the raw responseText will be 
 						//sent to the onSuccess callback.   
 					}
-					if (this.onSuccessCallback) this.onSuccessCallback(convertedData, this.outputObject);
+					if (this.onSuccessCallback) this.onSuccessCallback.call(this.callbackContext,
+							convertedData, this.outputObject);
 				} else {
-					if (this.onFailureCallback) this.onFailureCallback(this.request, this.outputObject);
+					if (this.onFailureCallback) this.onFailureCallback.call(this.callbackContext,
+							this.request, this.outputObject);
 					else try { 
 						this.outputObject.innerHTML = this.request.responseText; 
 					} catch (e) { }
@@ -129,7 +132,8 @@ RustyTools.Xhr = {
 			request.onreadystatechange = function() { xhrObject.handleResponse.call(xhrObject); };
 			request.send(xhrObject.query);
 		} else {
-			if (xhrObject.onXMLHttpRequestLoadError) xhrObject.onXMLHttpRequestLoadError();
+			if (xhrObject.onXMLHttpRequestLoadError) xhrObject.onXMLHttpRequestLoadError.call(
+					xhrObject.callbackContext);
 			else if ("text/html" == xhrObject.dataType) try {
 					xhrObject.outputObject.innerHTML = "<h2>Unable to initialize AJAX.</h2>";
 			} catch (e) { }
