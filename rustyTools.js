@@ -153,7 +153,8 @@ RustyTools.isArrayLike = function(object) {
 
 // Load any other one of the RustyTools...
 RustyTools.getUri = function(rustyToolsObjName) {
-	var fileName = rustyToolsObjName.replace(/\./g, '');
+	var fileName = rustyToolsObjName.replace(/\./g, '').replace(/^[A-Z]/g,
+		function(match) {return match.toLowerCase();});
 	return  RustyTools.cfg.rustyScriptPath + fileName + '.js';
 };
 

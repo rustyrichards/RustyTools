@@ -72,7 +72,7 @@ RustyTools.__test = function(t, r) {
 				not(!RustyTools.isArrayLike([]));				// empty array is array like
 		},
 
-		'RustyTools.RustyTools.getUri',
+		'RustyTools.getUri',
 		function(t, r) {
 			var uri = RustyTools.getUri('RustyTools.__test');
 			// Find this script and make sure the paths match.

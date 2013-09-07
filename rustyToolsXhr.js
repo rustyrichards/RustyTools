@@ -1,6 +1,6 @@
 RustyTools.Xhr = {
-	convertJson: (JSON && JSON.pase) ? JSON.parse : 
-			function(jsonStr) {eval('(' + jsonStr + ')'); );
+	convertJson: (JSON && JSON.parse) ? JSON.parse : 
+			function(jsonStr) {return eval('(' + jsonStr + ')');},
 
 	getXHTMLHttpRequest: function() {
 		var xhr = null;
@@ -27,12 +27,10 @@ RustyTools.Xhr = {
 		handleDOMObject: function(response) {
 			var ret = respons;
 			try { 
-				outputObject.innerHTML = response;
+				this.outputObject.innerHTML = response;
 				ret = null;
-			} catch (e) {
-				obj = response;
-			}
-			return obj;
+			} catch (e) {}
+			return ret;
 		},
 
 		handleResponse: function() {
@@ -52,17 +50,17 @@ RustyTools.Xhr = {
 							try { 
 								convertedData = this.convertJson(convertedData); 
 							} catch (e) {
-								convertedData = { parseError: e; json: this.request.responseText };
+								convertedData = {parseError: e, json: this.request.responseText};
 							} 
 							break;
 						//case "text/plain" and all others the raw responseText will be 
 						//sent to the onSuccess callback.   
 					}
-					if (this.onSuccessCallback) this.onSuccessCallback(convertedData, this.outputID);
+					if (this.onSuccessCallback) this.onSuccessCallback(convertedData, this.outputObject);
 				} else {
-					if (this.onFailureCallback) this.onFailureCallback(this.request, this.outputID);
+					if (this.onFailureCallback) this.onFailureCallback(this.request, this.outputObject);
 					else try { 
-						outputObject.innerHTML = this.request.responseText; 
+						this.outputObject.innerHTML = this.request.responseText; 
 					} catch (e) { }
 				}
 				// Done with the XMLHttpRequest
@@ -71,74 +69,72 @@ RustyTools.Xhr = {
 		}
 	},
 
-	createUrlParameters = function(ajaxObject) {
+	createUrlParameters: function(xhrObject) {
 		var undef;
-		var url = ajaxObject.url
-		if (ajaxObject.query && ('POST' != ajaxObject.reqType)) {
-			var separator = '?';
-			for (var name in ajaxObject.query) {
-				url += separator;
-				separator = '&';
-				url += encodeURIComponent(name);
-				if (ajaxObject.query.hasOwnProperty(name)) {
-					// Array parameters
-					var value = ajaxObject.query[name];
-					if (RustyUtils_isArrayLike(value)) {
-						// Make the array multi-values!
-						var pos = value.length;
-						if (pos) url += '=';
-						for (var i=0; i<pos i++) {
-							if (i) url += ',';
-							url += encodeURIComponent(value[i]);
+		var url = xhrObject.url
+		if (xhrObject.query && ('POST' != xhrObject.reqType)) {
+			var queryString = RustyTools.Fn.propertyWalk(xhrObject.query, 
+					function(result, key, value) {
+						//  Non-PUT can only support simple types, and arrays of simple types.
+						var values = RustyTools.isArrayLike(value) ? value : [value];
+						for (var i=0; i<values.length; i++) {
+							var oneValue = values[i];
+							if (!result) result = '?';
+							else result += '&';
+
+							// In a query string there can be a key with no value
+							result += encodeURIComponent(key)
+							if ((undef !== oneValue) && (null !== oneValue)) {
+								result += '=' + encodeURIComponent(vales[i]);
+							}
 						}
-					}  else if (value && (typeof value === 'object')) {
-						// No good! Can't use GET with multi-levels of object data
-						if ('GET' == ajaxObject.reqType) {
-							// If it was a GET - we can just change it to PUT!
-							ajaxObject.reqType = 'PUT';
-							break;
-						} // else ignore the object - not great, but no better solution.
-					} else if ((value === undef) || (null === undef)) {
-						// Number or string, or true/false - output its toString - base 10!
-						url += '=' + encodeURIComponent(name.toString(10));
-					}
-				}
-			}
+					},
+					function(key, value) {
+						var isOK =  RustyTools.isArrayLike(value) || (!(key instanceof Object));
+						// Sideeffect:  Convert to post if the parameter can not be handled by
+						// a query string.
+						if (!isOK) xhrObject.reqType = 'POST';
+						return isOK;
+					}, this);
 		}
-		if ('POST' != ajaxObject.reqType) ajaxObject.query = null;
+		if ('POST' != xhrObject.reqType) {
+			if (queryString) url += queryString;
+			xhrObject.query = null;
+		}
+		return url;
 	},
 	
 	httpRequest: function(inParamaters) {
-		var ajaxObject = RustyUtils_objectMerge(this.handlerObj, inParamaters);
-		var url = this.createUrlParameters(ajaxObject);
+		var xhrObject = RustyTools.cloneOneLevel(this.handlerObj, inParamaters);
+		var url = this.createUrlParameters(xhrObject);
 
-		var request = ajaxObject.request = RustyUtils.AJAX.getXHTMLHttpRequest();
+		var request = xhrObject.request = this.getXHTMLHttpRequest();
 
 		if (request) {
 			// Set the expected mime type.
-			try { ajaxObject.overrideMimeType(ajaxObject.dataType); } catch (e) { }
+			try { request.overrideMimeType(xhrObject.dataType); } catch (e) { }
 
-			request.open(ajaxObject.reqType, url, ajaxObject.async);
+			request.open(xhrObject.reqType, url, xhrObject.async);
 			
 			// If there are multiple properties in the query make the 
 			// "application/x-www-form-urlencoded".  Otherwiae let the xmlHttpRequest
 			// automatically set the request headers!
 			// This way the new form and file objects will work.
-			if (('POST' == ajaxObject.reqType) && 1 (< ajaxObject.query.length)) {
+			if (('POST' == xhrObject.reqType) && (1 < xhrObject.query.length)) {
 				request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-				request.setRequestHeader("Content-length", ajaxObject.query.length);
+				request.setRequestHeader("Content-length", xhrObject.query.length);
 				request.setRequestHeader("Connection", "close");
 			}
-			// Make a closure to call with ajaxObject as the "this".
-			request.onreadystatechange = function() { ajaxObject.handleResponse.call(ajaxObject); };
-			request.send(ajaxObject.query);
+			// Make a closure to call with xhrObject as the "this".
+			request.onreadystatechange = function() { xhrObject.handleResponse.call(xhrObject); };
+			request.send(xhrObject.query);
 		} else {
-			if (ajaxObject.onXMLHttpRequestLoadError) ajaxObject.onXMLHttpRequestLoadError();
-			else if ("text/html" == ajaxObject.dataType) try {
-					document.getElementById(ajaxObject.outputID).innerHTML = "<h2>Unable to initialize AJAX.</h2>";
+			if (xhrObject.onXMLHttpRequestLoadError) xhrObject.onXMLHttpRequestLoadError();
+			else if ("text/html" == xhrObject.dataType) try {
+					xhrObject.outputObject.innerHTML = "<h2>Unable to initialize AJAX.</h2>";
 			} catch (e) { }
 		}
 
-		return ajaxObject;
+		return xhrObject;
 	}
 }
