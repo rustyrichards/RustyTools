@@ -6,24 +6,25 @@
 * With a front end and back end translator it can be a compiler.
 */
 RustyTools.NumberToken = function(numberInfo) {
-	var undef;
+	"use strict";
 	if (!numberInfo) numberInfo = {};
-	this.prefix = (undef != numberInfo.prefix) ? numberInfo.prefix : '';
-	this.numerals = (undef != numberInfo.numerals) ? numberInfo.numerals : '[0-9]';
+	this.prefix = (undefined !== numberInfo.prefix) ? numberInfo.prefix : '';
+	this.numerals = (undefined !== numberInfo.numerals) ? numberInfo.numerals : '[0-9]';
 	this.nonZero = this.numerals.replace(/0/g, '1');
 	this.decimal = numberInfo.decimal;    // '\\.' for decimals undefined or nil means no decimal
 	this.exp = numberInfo.exp;            // '[eE]' for decimals undefined or nil means no decimal
-	this.expPrefix = (undef != numberInfo.expPrefix) ? numberInfo.expPrefix : '[+-]?';
+	this.expPrefix = (undefined !== numberInfo.expPrefix) ? numberInfo.expPrefix : '[+-]?';
 
 	// I don't know any language that allows a symbol right after a number, so
 	// I do not have a real-life test case.
 	// \u2028 & \u2029 are whitespace!
-	this.canNotFollowNumber = (undef != numberInfo.canNotFollowNumber) ?
+	this.canNotFollowNumber = (undefined !== numberInfo.canNotFollowNumber) ?
 			numberInfo.canNotFollowNumber :
 			'[\\dA-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]';
 };
 
 RustyTools.NumberToken.prototype.toRegExpStr = function() {
+	"use strict";
 	return '(' + this.prefix + this.numerals + '+' +
 			((this.decimal) ? ('(?:' + this.decimal + this.numerals + '*)') : '') +
 			((this.exp) ? ('(?:(?:' + this.exp + this.expPrefix + this.nonZero +
@@ -33,35 +34,37 @@ RustyTools.NumberToken.prototype.toRegExpStr = function() {
 };
 
 RustyTools.SymbolToken = function(symbolInfo) {
-	var undef;
+	"use strict";
 	if (!symbolInfo) symbolInfo = {};
-	this.prefix = (undef != symbolInfo.prefix) ? symbolInfo.prefix : '';
+	this.prefix = (undefined !== symbolInfo.prefix) ? symbolInfo.prefix : '';
 	// \u2028 & \u2029 are whitespace!
-	this.firstChar = (undef != symbolInfo.firstChar) ? symbolInfo.firstChar :
+	this.firstChar = (undefined !== symbolInfo.firstChar) ? symbolInfo.firstChar :
 			'[A-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]';
-	this.chars = (undef != symbolInfo.chars) ? symbolInfo.chars :
+	this.chars = (undefined !== symbolInfo.chars) ? symbolInfo.chars :
 			'[\\dA-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]';
-	this.suffix = (undef != symbolInfo.suffix) ? symbolInfo.suffix : '';
+	this.suffix = (undefined !== symbolInfo.suffix) ? symbolInfo.suffix : '';
 };
 
 RustyTools.SymbolToken.prototype.toRegExpStr = function() {
-	return '(' + this.prefix + this.firstChar + ((this.chars) ? (this.chars + 
+	"use strict";
+	return '(' + this.prefix + this.firstChar + ((this.chars) ? (this.chars +
 			((this.firstChar) ? '*' : '+')) :
 			'') + this.suffix + ')';
-}
+};
 
 /**
  * LiteralToken - comments, quoted strings, and things like cdata
  */
 RustyTools.LiteralToken = function(symbolInfo) {
-	var undef;
+	"use strict";
 	if (!symbolInfo) symbolInfo = {};
-	this.prefix = (undef != symbolInfo.prefix) ? symbolInfo.prefix : '\\/\\/';
-	this.escape = (undef != symbolInfo.escape) ? symbolInfo.escape : '';
-	this.suffix = (undef != symbolInfo.suffix) ? symbolInfo.suffix : '(?=\\r\\n|\\n|\\r|$)';
+	this.prefix = (undefined !== symbolInfo.prefix) ? symbolInfo.prefix : '\\/\\/';
+	this.escape = (undefined !== symbolInfo.escape) ? symbolInfo.escape : '';
+	this.suffix = (undefined !== symbolInfo.suffix) ? symbolInfo.suffix : '(?=\\r\\n|\\n|\\r|$)';
 };
 
 RustyTools.LiteralToken.prototype.toRegExpStr = function() {
+	"use strict";
 	var regExStr = this.prefix + '(';
 	if ((this.escape)) {
 		regExStr += '(?:(?:' + this.escape + ')?.)*?)';
@@ -69,7 +72,7 @@ RustyTools.LiteralToken.prototype.toRegExpStr = function() {
 		regExStr += '.*?)';
 	}
 	return regExStr + this.suffix;
-}
+};
 
 /**
  * @param   punctuationAndOperators - an array strings of the operators and punctuation.
@@ -78,6 +81,7 @@ RustyTools.LiteralToken.prototype.toRegExpStr = function() {
  * @param   symbolTable - optional the pre-defined symbols.
  */
 RustyTools.Translator = function(punctuationAndOperators, tokens, languageTreeRoot, symbolTable) {
+	"use strict";
 	// Convert the punctuationAndOperators into a regexp to crack the input
 	// string into punctuation tokens.
 	var punct = punctuationAndOperators.sort(RustyTools.Translator.reverseAsciibetical).join('\n');
@@ -117,6 +121,7 @@ RustyTools.Translator = function(punctuationAndOperators, tokens, languageTreeRo
 ];
 
 RustyTools.Translator.Token = function(tokenType, token, line, position) {
+	"use strict";
 	this.tokenType = tokenType;
 	this.str = token;
 	this.line = line;
@@ -124,7 +129,8 @@ RustyTools.Translator.Token = function(tokenType, token, line, position) {
 };
 
 RustyTools.Translator.reverseAsciibetical  = function(a, b) {
-	return b < a ? -1 : b = a ? 0 : 1;
+	"use strict";
+	return (b < a) ? -1 : b = a ? 0 : 1;
 };
 
 /**
@@ -134,6 +140,7 @@ RustyTools.Translator.reverseAsciibetical  = function(a, b) {
  *                  the token.
  */
 RustyTools.Translator.prototype.extractTokens = function(input) {
+	"use strict";
 	var output = [];
 	var result;
 	var line = 1;
@@ -144,9 +151,9 @@ RustyTools.Translator.prototype.extractTokens = function(input) {
 				// 0 = invalid is a tokenizer error.
 				var tokenType = (this.tokenTypes.length > i) ? i : 0;
 				output.push(tokenType);
-				output.push(new RustyTools.Translator.Token(this.tokenType(tokenType), result[i],
-						line, pos));
-				if (1 == tokenType) {
+				output.push(new RustyTools.Translator.Token(this.tokenType(tokenType),
+						result[i], line, pos));
+				if (1 === tokenType) {
 					// lineBreak
 					line++;
 					pos = 1;
@@ -161,28 +168,30 @@ RustyTools.Translator.prototype.extractTokens = function(input) {
 };
 
 RustyTools.Translator.prototype.showError = function(message, index, tokens) {
-	console.log(message);
-	console.log("Line: " + tokens[index].line + "  position: " +
+	"use strict";
+	RustyTools.log(message);
+	RustyTools.log("Line: " + tokens[index].line + "  position: " +
 			tokens[index].position);
 };
 
-RustyTools.Translator.prototype.translate_ = function(tokens, languageTree, symbolTable,
-		context) {
+RustyTools.Translator.prototype.translate_ = function(tokens, languageTree,
+		symbolTable, context) {
+	"use strict";
 	var output = [];
 	var index = 0;
-	var moreTokens = input.length + 2;
+	var moreTokens = tokens.length + 2;
 	while (index <= moreTokens) {
 		var type = tokens[index++];
 
 		try {
 			var next = languageTree[type](this, tokens, index, symbolTable, context);
 
-			if (-1 == next) {
+			if (-1 === next) {
 				// -1 does a pop.
 				return output;
 			} else if ('object' === typeof(next)) {
 				// Move into the next state
-				output.concat(this.translate_(input, next, symbolTable, context));
+				output.concat(this.translate_(tokens, next, symbolTable, context));
 			} else if ('string' === typeof(next)) {
 				output.push(next);
 			}
@@ -201,13 +210,14 @@ RustyTools.Translator.prototype.translate_ = function(tokens, languageTree, symb
  * uses translate_ to produce the output
  */
 RustyTools.Translator.prototype.translate = function(src, contextObject) {
+	"use strict";
 	if (!contextObject) contextObject = {};
 
 	var symbolTable = this.clone(this.initialSymbolTable);
 	var tokens = this.extractTokens(src);
 
 	var errorLocation = tokens.indexOf(0);
-	if (-1 != errorLocation) {
+	if (-1 !== errorLocation) {
 		this.showError("Unknown token", errorLocation, tokens);
 		return [];
 	} else {
@@ -222,6 +232,7 @@ RustyTools.Translator.prototype.translate = function(src, contextObject) {
  * @return  string
  */
 RustyTools.Translator.prototype.tokenType = function(typeIndex) {
+	"use strict";
 	if (0 > typeIndex || this.tokenTypes.length <= typeIndex) typeIndex = 0;
 	return this.tokenTypes[typeIndex];
 };

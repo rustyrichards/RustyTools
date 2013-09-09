@@ -1,3 +1,6 @@
+// The testers have a lot of tiny functons - use the whole script "use strict".
+"use strict";
+
 RustyTools.__test = function(t, r) {
 	var RustyToolsTest = RustyTools.wrapObject(RustyTools);
 
@@ -17,7 +20,7 @@ RustyTools.__test = function(t, r) {
 				for (var i=0; i<arguments.length; i++) {
 					resultString += arguments[i].toString(10) + '\n';
 				}
-			}}
+			}};
 
 			RustyTools.log("One", "Two");
 			r.same(resultString, "One\nTwo\n");
@@ -32,35 +35,35 @@ RustyTools.__test = function(t, r) {
 				for (var i=0; i<arguments.length; i++) {
 					resultString += arguments[i].toString(10) + '\n';
 				}
-			}}
+			}};
 
 			try {
-				throw { name: "TestException", 
+				throw { name: "TestException",
 						message: "This exception was generated for testing."};
 			} catch (e) {RustyTools.logException(e);}
-			
+
 			r.match(/^This exception was generated for testing\./, resultString,
 					'This exception was generated for testing.');
 		},
 
 		'RustyTools.configure && RustyTools.cloneOneLevel (configure calls cloneOneLevel)',
 		function(t, r) {
-			RustyToolsTest.configure({x_test: "string",
-			y_test: ['a', 'b', 3.3, false]});
-			r.same(RustyToolsTest.cfg.x_test, "string");
+			RustyToolsTest.configure({xTest: "string",
+			yTest: ['a', 'b', 3.3, false]});
+			r.same(RustyToolsTest.cfg.xTest, "string");
 		},
-		function(t, r) {r.same(RustyToolsTest.cfg.y_test[0], 'a');},
-		function(t, r) {r.same(RustyToolsTest.cfg.y_test[3], false);},
+		function(t, r) {r.same(RustyToolsTest.cfg.yTest[0], 'a');},
+		function(t, r) {r.same(RustyToolsTest.cfg.yTest[3], false);},
 		function(t, r) {
-			RustyToolsTest.configure({y_test: ['c', 'd']});
-			// y_test: should now be ['a', 'b', 3.3, false, 'c, 'd]
-			return r.same(RustyToolsTest.cfg.y_test[4], 'c');
+			RustyToolsTest.configure({yTest: ['c', 'd']});
+			// yTest: should now be ['a', 'b', 3.3, false, 'c, 'd]
+			return r.same(RustyToolsTest.cfg.yTest[4], 'c');
 		},
-		function(t, r) {r.same(RustyToolsTest.cfg.y_test[2], 3.3);},
+		function(t, r) {r.same(RustyToolsTest.cfg.yTest[2], 3.3);},
 
 		'RustyTools.wrapObject',
 		function(t, r) {
-			r.not(RustyTools.cfg.x_test).different(RustyTools.cfg.x_test, RustyToolsTest.cfg.x_test);
+			r.not(RustyTools.cfg.xTest).different(RustyTools.cfg.xTest, RustyToolsTest.cfg.xTest);
 		},
 
 		'RustyTools.isArrayLike',
@@ -74,14 +77,19 @@ RustyTools.__test = function(t, r) {
 
 		'RustyTools.getUri',
 		function(t, r) {
-			var uri = RustyTools.getUri('RustyTools.__test');
-			// Find this script and make sure the paths match.
-			var scripts = document.getElementsByTagName('script');
-			var scriptSrc = '';
-			var i = scripts.length;
-			while (scriptSrc != uri && i--) scriptSrc = scripts[i].src;
+			if (self.document) {
+				var uri = RustyTools.getUri('RustyTools.__test');
+				// Find this script and make sure the paths match.
+				var scripts = self.document.getElementsByTagName('script');
+				var scriptSrc = '';
+				var i = scripts.length;
+				while (scriptSrc !== uri && i--) scriptSrc = scripts[i].src;
 
-			r.same(scriptSrc, uri);
+				r.same(scriptSrc, uri);
+			} else {
+				// No window.document, can't run this test!
+				r.not(!self.document);
+			}
 		},
 
 		'RustyTools.getUri, RustyTools.load, RustyTools.waitForCondition tested with RustyTools.waitForLoad',
@@ -96,7 +104,7 @@ RustyTools.__test = function(t, r) {
 							// Check this by looking for a false return from RustyTools.load
 							r.not(RustyTools.load("RustyTools.Empty"));
 						}
-					]); 
+					]);
 				});
 
 			// Loading should be true.

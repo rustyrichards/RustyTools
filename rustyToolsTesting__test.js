@@ -1,3 +1,6 @@
+// The testers have a lot of tiny functons - use the whole script "use strict".
+"use strict";
+
 RustyTools.Testing.__test = function(t, r) {
 	var expr = new RegExp('[1-9][0-9]*', 'g');
 	// .Tester level RustyTools methods
@@ -58,28 +61,37 @@ function doTests() {
 		function(t, r) {r.same(1+1, 2);}
 	]};
 
-	var afterReady = function() {
-		tester.buildDom( 
-				'<div class="testFrame <#type/>"><h1><#type/> - <#count/></h1><#content/></div>',
-				'<div class="description"><#description/></div>'+
-				'<div class="test"><#test/>'+
-					'<div class="log"><#log/></div>'+
-					'<div class="error"><#error/></div>'+
-					'<div class="exception"><#exception/></div>'+
-				'</div>',
-				document.getElementById('report')
-		);
-		document.getElementById('json').innerHTML = RustyTools.Str.entitize(tester.toJson(), true);
-	};
+	if (self.document) {
+		var afterReady = function() {
+			tester.buildDom(
+				'<#allResults><div class="testFrame <#resultType/>"><h1>' +
+				'<#resultType/> - <#resultCount/></h1><#results>' +
+					'<div class="description"><#description/></div>'+
+					'<div class="test"><#test/>'+
+						'<div class="log"><#log/></div>'+
+						'<div class="error"><#error/></div>'+
+						'<div class="exception"><#exception/></div>'+
+					'</div>' +
+				'</#results></div></#allResults>',
+					self.document.getElementById('report')
+			);
+			self.document.getElementById('json').innerHTML = RustyTools.Str.entitize(
+					tester.toJson(), true);
+		};
 
 
-	// Force testAllWhenAvailable to wait for the dynamically created span. (below)
-	tester.testAllWhenAvailable('#placeholderSpan', 1000, afterReady, testArray);
+		// Force testAllWhenAvailable to wait for the dynamically created span. (below)
+		tester.testAllWhenAvailable('#placeholderSpan', 1000, afterReady, testArray);
 
-	var el = document.createElement('span');
-	el.id = 'placeholderSpan'
-	document.body.appendChild(el);
-
+		if (self.document) {}
+		var el = self.document.createElement('span');
+		el.id = 'placeholderSpan';
+		self.document.body.appendChild(el);
+	} else {
+		// Not in a web page.
+		tester.testAll(testArray);
+		RustyTools.log(tester.toJson());
+	}
 };
 
 function hasNeededTestObjects() {

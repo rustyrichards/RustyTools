@@ -1,14 +1,12 @@
-window['RustyTools'] || (window['RustyTools'] = RustyTools = {});
-
 // Functional support
-// Chain to the clobal object so RustyTools.Fn can be the context for function calls
+// Chain to the global object so RustyTools.Fn can be the context for function calls
 RustyTools.Fn = RustyTools.wrapObject(self);
 
 // Reduce implementation derived from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
 if (RustyTools.cfg.test || 'function' !== typeof Array.prototype.reduce) {
 	RustyTools.Fn._testableReduce = function(reduceRight, array, fnCallback, opt_initialValue) {
-		var undef;
-		if (null === array || undef === array) {
+		"use strict";
+		if (null === array || undefined === array) {
 			throw new TypeError('RustyTools.Fn._testableReduce or Array.prototype.reduce called on null or undefined');
 		}
 		if ('function' !== typeof fnCallback) {
@@ -40,21 +38,29 @@ if (RustyTools.cfg.test || 'function' !== typeof Array.prototype.reduce) {
 		}
 		return value;
 	};
+} else {
+	RustyTools.Fn._testableReduce = function(reduceRight, array, fnCallback, opt_initialValue) {
+		"use strict";
+		if (reduceRight) return array.reduceRight(fnCallback, opt_initialValue);
+		return array.reduce(fnCallback, opt_initialValue);
+	};
 }
 
 if ('function' !== typeof Array.prototype.reduce) {
-	Array.prototype.reduce = function(fnCallback, opt_initialValue) {
+	Array.prototype.reduce = function(/* fnCallback, opt_initialValue */) {
+		"use strict";
 		var params = Array.prototype.slice.call(arguments, 0);
 		params.unshift(this);
 		params.unshift(false);
-		return RustyTools._testableReduce.apply(RustyRools, params);
+		return RustyTools._testableReduce.apply(RustyTools, params);
 	};
 
-	Array.prototype.reduceRight = function(fnCallback, opt_initialValue) {
+	Array.prototype.reduceRight = function(/* fnCallback, opt_initialValue */) {
+		"use strict";
 		var params = Array.prototype.slice.call(arguments, 0);
 		params.unshift(this);
 		params.unshift(true);
-		return RustyTools._testableReduce.apply(RustyRools, params);
+		return RustyTools._testableReduce.apply(RustyTools, params);
 	};
 }
 
@@ -63,59 +69,67 @@ if ('function' !== typeof Array.prototype.reduce) {
 // Reference: http://es5.github.com/#x15.4.4.19
 if (RustyTools.cfg.test || !Array.prototype.map) {
 	RustyTools.Fn._testableMap = function(array, fnCallback, opt_thisArg) {
-	
-		if (array == null) {
+		"use strict";
+
+		if (!array) {
 			throw new TypeError('RustyTools.Fn._testableMap or Array.prototype.map called on null or undefined');
 		}
-	
+
 		if (typeof fnCallback !== "function") {
 			throw new TypeError(fnCallback + " is not a function");
 		}
-	
+
 		var O = array;
 		// If it is an array - great!  If it is array like convert it.
 		if (!(O instanceof Array)) O = Array.prototype.slice.call(array, 0);
-		
+
 		// k be ToUint32(lenValue).
 		var k = O.length >>> 0;
-	
+
 		var T = opt_thisArg || null;
-	
+
 		var result = new Array(k);
-	
+
 		// Work from right to make the while slightly faster.
 		while(k--) {
 			if (k in O) result[ k ] = fnCallback.call(T, O[ k ], k, O);
 		}
-	
+
 		return result;
+	};
+} else {
+	RustyTools.Fn._testableMap = function(array, fnCallback, opt_thisArg) {
+		"use strict";
+		return array.map(fnCallback, opt_thisArg);
 	};
 }
 
 if (!Array.prototype.map) {
 	Array.prototype.map = function(fnCallback, opt_thisArg) {
+		"use strict";
 		RustyTools._testableMap(this, fnCallback, opt_thisArg);
 	};
 }
 
 // The recurive implementation of propertyWalk
-RustyTools.Fn.propertyWalk_ = function(result, visited, keyPath, object, 
-		fnCallback, thisArg, opt_, fnPropertyWanted) {
+RustyTools.Fn.propertyWalk_ = function(result, visited, keyPath, object,
+		fnCallback, thisArg, opt_fnPropertyWanted) {
+	"use strict";
 	// RustyTools.Fn.propertyWalk does the parameter validation!
 
 	// Prevent recursive loops
-	if (-1 == visited.indexOf(object)) {
+	if (-1 === visited.indexOf(object)) {
 		visited.push(object);
 
 		for (var key in object) {
-			var value = object[key]
-			if (object.hasOwnProperty(key) && (!fnPropertyWanted || 
-					fnPropertyWanted.call(context, key, value))) {
+			var value = object[key];
+			if (object.hasOwnProperty(key) && (!opt_fnPropertyWanted ||
+					opt_fnPropertyWanted.call(thisArg, key, value))) {
 				keyPath.push(key);
-				if (!RustyTools.isArrayLike(value) && 'object' == typeof value) {
+				if (!RustyTools.isArrayLike(value) && 'object' === typeof value) {
 					// For child objects recurse.
-					result = this.propertyWalk_(result, visited, keyPath, value, 
-							fnCallback, thisArg, fnPropertyWanted);
+					result = this.propertyWalk_(result, visited, keyPath, value,
+							fnCallback, thisArg, opt_fnPropertyWanted);
 				} else {
 					// For arrays or simple values fnCallback must handle the value
 					result = fnCallback.call(thisArg, result, key, value, keyPath);
@@ -137,14 +151,15 @@ RustyTools.Fn.propertyWalk_ = function(result, visited, keyPath, object,
 //		key - the string name of the property.
 //		value - the value of the property.
 //    keyPath - an array of all the keys from ancestor objects.  (key will be the
-//				last value in the array.) 
+//				last value in the array.)
 RustyTools.Fn.propertyWalk = function(object, fnCallback, opt_fnPropertyWanted, opt_thisArg) {
+	"use strict";
 	if (object == null) {
 		throw new TypeError('RustyTools.Fn.propertyWalk called on null or undefined');
 	}
 
 	if (opt_fnPropertyWanted && typeof opt_fnPropertyWanted !== "function") {
-		throw new TypeError(fnPropertyWanted + " is not a function");
+		throw new TypeError(opt_fnPropertyWanted + " is not a function");
 	}
 
 	if (typeof fnCallback !== "function") {
@@ -157,7 +172,7 @@ RustyTools.Fn.propertyWalk = function(object, fnCallback, opt_fnPropertyWanted, 
 
 	var result;	// Result starts with "undefined".
 
-	return this.propertyWalk_(result, [], [], object, fnCallback, 
+	return this.propertyWalk_(result, [], [], object, fnCallback,
 			opt_thisArg || null, opt_fnPropertyWanted);
 };
 
@@ -171,21 +186,23 @@ RustyTools.Fn.propertyWalk = function(object, fnCallback, opt_fnPropertyWanted, 
 // (Note this often means you must bind or return an array of
 // the next function + parameters)
 RustyTools.Fn.buildTrampoline = function(opt_contextObj) {
+	"use strict";
 	if (!opt_contextObj) opt_contextObj = this;
 
 	// return the trampoline bound to the desired context
 	return function(fn /*, . ... */) {
+		var result;
 		var params = Array.prototype.slice.call(arguments, 1);
 
 		while (fn) {
-			var result = fn.apply(opt_contextObj, params);
+			result = fn.apply(opt_contextObj, params);
 			fn = null;
-			if ('function' == typeof result) {
+			if ('function' === typeof result) {
 				fn = result;
 				result = null;
 				params = [];
 			} else if (Array.isArray && Array.isArray(result) &&
-					('function' == typeof result[0])) {
+					('function' === typeof result[0])) {
 				fn = result[0];
 				params = Array.prototype.slice.call(result, 1);
 				result = null;
@@ -193,7 +210,7 @@ RustyTools.Fn.buildTrampoline = function(opt_contextObj) {
 		}
 
 		return result;
-	}
+	};
 };
 
 // Note:  RustyTools.Fn chains from self (the flobal object), so it works as the
@@ -204,6 +221,7 @@ RustyTools.Fn.trampoline = RustyTools.Fn.buildTrampoline(RustyTools.Fn);
 // other prepresentations (usually strings).
 // (Properly the predicate should return true of false, but !falsy and falsy are good enought.)
 RustyTools.Fn.predicateToValue = function(functionPredicate, trueValue, falseValue) {
+	"use strict";
 	return function() {
 		var params = Array.prototype.slice.call(arguments, 0);
 		if (functionPredicate.apply(null, params)) return trueValue;
@@ -212,13 +230,14 @@ RustyTools.Fn.predicateToValue = function(functionPredicate, trueValue, falseVal
 };
 
 // The javascript "bind" works well for setting the object and left most parameters.
-// But often the right most paramters are the issue.  
+// But often the right most paramters are the issue.
 //  var parseIntBase2 = RustyTools.Fn.partialApplication(1, parseInt, null, 2 /*base */);
 //  var integers = [some binary string array].map(parseIntBase2);
 // or
 //  var maxOf2 = RustyTools.Fn.partialApplication(2, Math.max); // Must look at only "value" and "current" the index and array would mess up the max.
 //  var max = [some number array].reduce(maxOf2);
 RustyTools.Fn.partialApplication = function(desiredArgCount, fn, opt_fnThisObj /* ... */) {
+	"use strict";
 	// Save the partial application args - they will be added after the
 	// remainingCount arguments.
 	var toApply =  Array.prototype.slice.call(arguments, 3);
@@ -227,12 +246,13 @@ RustyTools.Fn.partialApplication = function(desiredArgCount, fn, opt_fnThisObj /
 				// Make an array of the allowed passed arguments + the saved partial arguments.
 				Array.prototype.slice.call(arguments, 0, desiredArgCount).
 				concat(toApply));
-	}
+	};
 };
 
 // Like in the C++ iterators all of the sort ordering can be done with a "less than" predicate.
 // RustyTools.Fn.ordering produces a -1, 0, +1 ordering function from the "less than" prdicate.
 RustyTools.Fn.ordering = function(fnLessThan, opt_fnThisObj) {
+	"use strict";
 	// The generated ordering returns 0 of the arguments are equal, -1 if the first argument is less,
 	// 1 if the second argument is less.  (Usefull for the Array.prototype.sort)
 	var curriedLessThan = RustyTools.Fn.partialApplication(2, fnLessThan, opt_fnThisObj);
@@ -242,11 +262,12 @@ RustyTools.Fn.ordering = function(fnLessThan, opt_fnThisObj) {
 		if (curriedLessThan(b, a)) return 1;
 
 		return 0; // Not less or grater, must be the same.
-	}
+	};
 };
 
 // Make a function that successively runs the passed in functions (like piping together filters.)
 RustyTools.Fn.compose = function(/* function, ... */) {
+	"use strict";
 	var toApply =  Array.prototype.slice.call(arguments, 0);
 
 	// The returned function will take an arbitrary number of paramters, and it will keep sending
@@ -259,6 +280,6 @@ RustyTools.Fn.compose = function(/* function, ... */) {
 		}
 
 		return results;
-	}
+	};
 };
 
