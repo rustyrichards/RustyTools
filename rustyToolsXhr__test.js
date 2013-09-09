@@ -1,3 +1,6 @@
+// The testers have a lot of tiny functons - use the whole script "use strict".
+"use strict";
+
 RustyTools.Xhr.__test = function(t, r) {
 	// .Fn level RustyTools methods
 	t.test([
@@ -13,7 +16,7 @@ RustyTools.Xhr.__test = function(t, r) {
 							// The content of RustyTools.empty should begin with "RustyTools.Empty"
 							r.match(/^RustyTools\.Empty/, strData, 'RustyTools.Empty');
 						}
-					]); 
+					]);
 				}, onFailureCallback: function(request) {
 					// This was an asyncronous callback, so run .test to test and show the results.
 					t.test([
@@ -22,7 +25,7 @@ RustyTools.Xhr.__test = function(t, r) {
 							// If it errored the request.status must be something other than 200
 							r.same(request.status, 200);
 						}
-					]); 
+					]);
 				}, onXMLHttpRequestLoadError: function() {
 					// This was an asyncronous callback, so run .test to test and show the results.
 					t.test([
@@ -31,7 +34,7 @@ RustyTools.Xhr.__test = function(t, r) {
 							// Failed to create an XHR object
 							r.not("Failed to create XHR.");
 						}
-					]); 
+					]);
 				}});
 		},
 		'RustyTools.Xhr.httpRequest - GET non-existing url',
@@ -45,7 +48,7 @@ RustyTools.Xhr.__test = function(t, r) {
 							// Should not succeed rustyToolsEmpty2.js does not exist
 							r.not(strData || t);
 						}
-					]); 
+					]);
 				}, onFailureCallback: function(request) {
 					// This was an asyncronous callback, so run .test to test and show the results.
 					t.test([
@@ -55,7 +58,7 @@ RustyTools.Xhr.__test = function(t, r) {
 							// Fail but invert the failure code so we can see the code.
 							r.same(request.status, 200).invertFailed();
 						}
-					]); 
+					]);
 				}, onXMLHttpRequestLoadError: function() {
 					// This was an asyncronous callback, so run .test to test and show the results.
 					t.test([
@@ -64,7 +67,7 @@ RustyTools.Xhr.__test = function(t, r) {
 							// Failed to create an XHR object
 							r.not("Failed to create XHR.");
 						}
-					]); 
+					]);
 				}});
 		}
 	]);

@@ -1,6 +1,9 @@
+// The testers have a lot of tiny functons - use the whole script "use strict".
+"use strict";
+
 RustyTools.Tree.__test = function(t, r) {
 	// .Tree test cases
-	var testObj = {a:{b:{c:{d:1.1}}}, u:{v:2.2, w:{x:3.3, y:{}}}}
+	var testObj = {a:{b:{c:{d:1.1}}}, u:{v:2.2, w:{x:3.3, y:{}}}};
 	t.test([
 		'RustyTools.Tree.__test \n' +
 		'RustyTools.Tree.findMatchingDescendants',
@@ -8,7 +11,7 @@ RustyTools.Tree.__test = function(t, r) {
 			// Find all object decendants
 			var matchedDescendants = RustyTools.Tree.findMatchingDescendants(
 				testObj, function(property) {
-					return 'object' == typeof property;
+					return 'object' === typeof property;
 				}, function(parent) {
 					var result = [];
 					for (var i in parent) {
@@ -37,7 +40,7 @@ RustyTools.Tree.__test = function(t, r) {
 			// Find all numbers in testObj
 			var allNumbers = RustyTools.Tree.findAllMatches(
 				testObj, function(property) {
-					return 'number' == typeof property;
+					return 'number' === typeof property;
 				}, function(parent) {
 					var result = [];
 					for (var i in parent) {
@@ -55,22 +58,27 @@ RustyTools.Tree.__test = function(t, r) {
 		},
 		'RustyTools.Tree.findAllMatches find all nodes in the current document',
 		function(t,r) {
-			// Find all numbers in testObj
-			var allElements = RustyTools.Tree.findAllMatches(
-				document, function(node) {
-					return !!node.tagName;	// text nodes don't have a tagName.
-				}, function(parent) {
-					return Array.prototype.slice.call(parent.childNodes, 0);
+			if (self.document) {
+				// Find all numbers in testObj
+				var allElements = RustyTools.Tree.findAllMatches(self.document,
+					function(node) {
+						return !!node.tagName;	// text nodes don't have a tagName.
+					}, function(parent) {
+						return Array.prototype.slice.call(parent.childNodes, 0);
+					});
+
+				var forJson = allElements.map(function(node) {
+					return {tagName: node.tagName, id: node.id};
 				});
 
-			var forJson = allElements.map(function(node) {
-				return {tagName: node.tagName, id: node.id};
-			})
-
-			// allElements better have a body.
-			r.not(0 == allElements.length).
-				different(-1, allElements.indexOf(document.body)).
-				logObjects(forJson);
+				// allElements better have a body.
+				r.not(0 === allElements.length).
+					different(-1, allElements.indexOf(self.document.body)).
+					logObjects(forJson);
+				} else {
+					// Need a web page to run this test.
+					r.not(!self.document);
+				}
 		},
 	]);
 };

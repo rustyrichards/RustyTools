@@ -1,8 +1,11 @@
 RustyTools.Xhr = {
-	convertJson: (JSON && JSON.parse) ? JSON.parse : 
-			function(jsonStr) {return eval('(' + jsonStr + ')');},
+	convertJson: (JSON && JSON.parse) ? JSON.parse :
+			function(jsonStr) {
+				"use strict";
+				return eval('(' + jsonStr + ')');},
 
 	getXHTMLHttpRequest: function() {
+		"use strict";
 		var xhr = null;
 		if (window.XMLHttpRequest) {
 			xhr = new XMLHttpRequest();
@@ -26,8 +29,9 @@ RustyTools.Xhr = {
 		requestResponseText: "",
 
 		handleDOMObject: function(response) {
+			"use strict";
 			var ret = respons;
-			try { 
+			try {
 				this.outputObject.innerHTML = response;
 				ret = null;
 			} catch (e) {}
@@ -35,35 +39,36 @@ RustyTools.Xhr = {
 		},
 
 		handleResponse: function() {
-			if (4 == this.request.readyState) {
+			"use strict";
+			if (4 === this.request.readyState) {
 				if (((200 <= (this.requestStatus = this.request.status)) &&
-						(300 > this.requestStatus)) ||  (304 == this.requestStatus) ||
-						(0 == this.requestStatus)) {
+						(300 > this.requestStatus)) ||  (304 === this.requestStatus) ||
+						(0 === this.requestStatus)) {
 					var convertedData = (this.requestResponseText = this.request.responseText);
 					switch (this.dataType) {
-						case "text/html": 
-							convertedData = this.handleDOMObject(convertedData); 
+						case "text/html":
+							convertedData = this.handleDOMObject(convertedData);
 							break;
-						case "text/xml": 
-							convertedData = this.request.responseXML; 
+						case "text/xml":
+							convertedData = this.request.responseXML;
 							break;
-						case "text/json": 
-							try { 
-								convertedData = this.convertJson(convertedData); 
+						case "text/json":
+							try {
+								convertedData = this.convertJson(convertedData);
 							} catch (e) {
 								convertedData = {parseError: e, json: this.request.responseText};
-							} 
+							}
 							break;
-						//case "text/plain" and all others the raw responseText will be 
-						//sent to the onSuccess callback.   
+						//case "text/plain" and all others the raw responseText will be
+						//sent to the onSuccess callback.
 					}
 					if (this.onSuccessCallback) this.onSuccessCallback.call(this.callbackContext,
 							convertedData, this.outputObject);
 				} else {
 					if (this.onFailureCallback) this.onFailureCallback.call(this.callbackContext,
 							this.request, this.outputObject);
-					else try { 
-						this.outputObject.innerHTML = this.request.responseText; 
+					else try {
+						this.outputObject.innerHTML = this.request.responseText;
 					} catch (e) { }
 				}
 				// Done with the XMLHttpRequest
@@ -73,10 +78,11 @@ RustyTools.Xhr = {
 	},
 
 	createUrlParameters: function(xhrObject) {
+		"use strict";
 		var undef;
 		var url = xhrObject.url
 		if (xhrObject.query && ('POST' != xhrObject.reqType)) {
-			var queryString = RustyTools.Fn.propertyWalk(xhrObject.query, 
+			var queryString = RustyTools.Fn.propertyWalk(xhrObject.query,
 					function(result, key, value) {
 						//  Non-PUT can only support simple types, and arrays of simple types.
 						var values = RustyTools.isArrayLike(value) ? value : [value];
@@ -106,8 +112,9 @@ RustyTools.Xhr = {
 		}
 		return url;
 	},
-	
+
 	httpRequest: function(inParamaters) {
+		"use strict";
 		var xhrObject = RustyTools.cloneOneLevel(this.handlerObj, inParamaters);
 		var url = this.createUrlParameters(xhrObject);
 
@@ -118,12 +125,12 @@ RustyTools.Xhr = {
 			try { request.overrideMimeType(xhrObject.dataType); } catch (e) { }
 
 			request.open(xhrObject.reqType, url, xhrObject.async);
-			
-			// If there are multiple properties in the query make the 
+
+			// If there are multiple properties in the query make the
 			// "application/x-www-form-urlencoded".  Otherwiae let the xmlHttpRequest
 			// automatically set the request headers!
 			// This way the new form and file objects will work.
-			if (('POST' == xhrObject.reqType) && (1 < xhrObject.query.length)) {
+			if (('POST' === xhrObject.reqType) && (1 < xhrObject.query.length)) {
 				request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 				request.setRequestHeader("Content-length", xhrObject.query.length);
 				request.setRequestHeader("Connection", "close");
@@ -134,7 +141,7 @@ RustyTools.Xhr = {
 		} else {
 			if (xhrObject.onXMLHttpRequestLoadError) xhrObject.onXMLHttpRequestLoadError.call(
 					xhrObject.callbackContext);
-			else if ("text/html" == xhrObject.dataType) try {
+			else if ("text/html" === xhrObject.dataType) try {
 					xhrObject.outputObject.innerHTML = "<h2>Unable to initialize AJAX.</h2>";
 			} catch (e) { }
 		}

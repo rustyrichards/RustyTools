@@ -5,6 +5,7 @@ RustyTools.Tree = {
 	// must match be matched for the children to be tested.  (Only matching decendants of matching
 	// parents.)
 	findMatchingDescendants: function(startObj, fnIsObjMatched, fnGetChildren) {
+		"use strict";
 		var matchedObjs = [];
 		var lastMoLength = 0;
 		// startObj may be desired, or maybe we just want the children.
@@ -25,7 +26,7 @@ RustyTools.Tree = {
 				for (var j=0; j<newObjs.length; j++) {
 					var testObj = newObjs[j];
 					if (fnIsObjMatched(testObj)) {
-						if (-1 == matchedObjs.indexOf(testObj)) matchedObjs.push(testObj);
+						if (-1 === matchedObjs.indexOf(testObj)) matchedObjs.push(testObj);
 					}
 				}
 				index++;
@@ -38,8 +39,9 @@ RustyTools.Tree = {
 	// findAllMatches is simular to findMatchingDescendants except it will search the whole object tree
 	// and return all object that pass fnIsObjMatched
 	findAllMatches: function(startObj, fnIsObjMatched, fnGetChildren) {
+		"use strict";
 		// allObjsInTree is needed to prevent duplicates. (The same object in different parts of the tree.)
-		var allObjsInTree = [startObj]
+		var allObjsInTree = [startObj];
 		var matchedObjs = [];
 		var lastObjsLength = 0;
 
@@ -58,7 +60,7 @@ RustyTools.Tree = {
 				var newObjs = fnGetChildren(allObjsInTree[index]);
 				for (var j=0; j<newObjs.length; j++) {
 					var testObj = newObjs[j];
-					if (-1 == allObjsInTree.indexOf(testObj)) {
+					if (-1 === allObjsInTree.indexOf(testObj)) {
 						// Here testObj is unique.
 						allObjsInTree.push(testObj);
 						if (fnIsObjMatched(testObj)) matchedObjs.push(testObj);

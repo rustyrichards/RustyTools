@@ -1,3 +1,6 @@
+// The testers have a lot of tiny functons - use the whole script "use strict".
+"use strict";
+
 RustyTools.NumberToken.__test = function(t, r) {
 	// Decimal constructor
 	var number = new RustyTools.NumberToken({decimal: '\\.', exp: '[eE]'});
