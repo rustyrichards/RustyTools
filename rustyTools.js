@@ -40,7 +40,7 @@ RustyTools = {
 		return result;
 	},
 
-	// simpleObjCopy will alias most objects; numbers will copy;
+	// simpleObjCopy will copy only the numbers, booleans, and strings.
 	simpleObjCopy: function(/* objects */) {
 		"use strict";
 		var result = {};
@@ -48,13 +48,26 @@ RustyTools = {
 			var toClone = arguments[i];
 			if (toClone) {
 				for (var key in toClone) {
-					if (toClone.hasOwnProperty(key)) {
+					// No hasOwnProperty check.  This will copy base class members too.
+					var type = typeof toClone[key];
+					if (-1 !== ['number', 'boolean', 'string'].indexOf(type)) {
 						result[key] = toClone[key];
 					}
 				}
 			}
 		}
 		return result;
+	},
+
+	// constantWrapper - clone the inputs into constData in a closure that has
+	// exclusive (private) access to constData, then reutrn an accessor to read
+	// a data item from the constData.
+	constantWrapper: function(/* objects */) {
+		"use strict";
+		var constData = RustyTools.simpleObjCopy.apply(this,
+				Array.prototype.slice.call(arguments, 0));
+
+		return function(key) {return constData[key];};
 	},
 
 	log: function() {

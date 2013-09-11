@@ -66,6 +66,56 @@ RustyTools.__test = function(t, r) {
 			r.not(RustyTools.cfg.xTest).different(RustyTools.cfg.xTest, RustyToolsTest.cfg.xTest);
 		},
 
+		'RustyTools.cloneOneLevel',
+		function(t, r) {
+			// Test the object merging
+			var clone = RustyTools.cloneOneLevel({a: 1, c:3}, {b:2, d:'last'});
+
+			var cloneKeys = Object.keys(clone).sort();
+
+			r.same(clone.a, 1).same(clone.b, 2).same(clone.c, 3).
+				same(clone.d, 'last').same(cloneKeys, ['a', 'b', 'c', 'd']);
+		},
+
+		function(t, r) {
+			// Test that the clone is no longer the same as the source.
+			var source = {a:'one', b:2.2};
+			var clone = RustyTools.cloneOneLevel(source);
+
+			// Changing a str or number in shource should not change clone.
+			source.a = 'two';
+			source.b = 3.14159;
+
+			r.different(clone.a, source.a).different(clone.b, source.b).
+				same(clone.a, 'one').same(clone.b, 2.2);
+		},
+
+		'RustyTools.constantWrapper',
+		function(t, r) {
+			// Make an constantWrapper, and check that it handles known and unknown keys.
+			var source = {a:'one', b:2.2};
+			var wrapper = RustyTools.constantWrapper(source);
+
+			// Changing a str or number in shource should not change clone.
+			r.same(wrapper('a'), 'one').same(wrapper('b'), 2.2).not(wrapper('c'));
+		},
+
+		'RustyTools.simpleObjCopy',
+		function(t, r) {
+			// Only the numbers, booleans and strings should copy
+			var source = {a: 1.1,
+					b: true,
+					c: 'test',
+					d: {x: 1, y: 2},
+					e: function(x) {return x;},
+					f: true
+			}
+			var clone = RustyTools.simpleObjCopy(source);
+
+			r.same(clone.a, source.a).same(clone.b, source.b).same(clone.c, source.c).
+				not(clone.d).not(clone.e);
+		},
+
 		'RustyTools.isArrayLike',
 		function(t, r) {
 			r.not(RustyTools.isArrayLike(1.1)).					// number is not array like

@@ -1,13 +1,13 @@
 // The testers have a lot of tiny functons - use the whole script "use strict".
 "use strict";
 
-RustyTools.NumberToken.__test = function(t, r) {
+RustyTools.Translate.NumberTools.__test = function(t, r) {
 	// Decimal constructor
-	var number = new RustyTools.NumberToken({decimal: '\\.', exp: '[eE]'});
+	var number = new RustyTools.Translate.NumberTools({decimal: '\\.', exp: '[eE]'});
 	var expr = new RegExp(number.toRegExpStr());
 	t.test([
-			"RustyTools.NumberToken.__test\n" +
-			"NumberToken({decimal: '\\.', exp: '[eE]'}); /* floating point */",
+			"RustyTools.Translate.NumberTools.__test\n" +
+			"Translate.NumberTools({decimal: '\\.', exp: '[eE]'}); /* floating point */",
 			function(t, r) {r.not(number.prefix);},
 			function(t, r) {r.same(number.numerals, '[0-9]');},
 			function(t, r) {r.same(number.nonZero, '[1-9]');},
@@ -26,11 +26,11 @@ RustyTools.NumberToken.__test = function(t, r) {
 	]);
 
 	// Default constructor
-	number = new RustyTools.NumberToken();
+	number = new RustyTools.Translate.NumberTools();
 	// don't care about numberInfo.expPrefix if !number.exp,
 	expr = new RegExp(number.toRegExpStr());
 	t.test([
-			'NumberToken(); /* integer */',
+			"Translate.NumberTools(); /* integer */",
 			function(t, r) {r.not(number.prefix);},
 			function(t, r) {r.same(number.numerals, '[0-9]');},
 			function(t, r) {r.not(number.decimal);},
@@ -45,11 +45,11 @@ RustyTools.NumberToken.__test = function(t, r) {
 	]);
 
 	// Octal constructor
-	number = new RustyTools.NumberToken({prefix: '0', numerals: '[0-7]'});
+	number = new RustyTools.Translate.NumberTools({prefix: '0', numerals: '[0-7]'});
 	// don't care about numberInfo.expFirstChar if !number.exp,
 	expr = new RegExp(number.toRegExpStr());
 	t.test([
-			"NumberToken({prefix: '0', numerals: '[0-7]'}); /* octal */",
+			"Translate.NumberTools({prefix: '0', numerals: '[0-7]'}); /* octal */",
 			function(t, r) {r.same(number.prefix, '0');},
 			function(t, r) {r.same(number.numerals, '[0-7]');},
 			function(t, r) {r.not(number.decimal);},
@@ -63,11 +63,11 @@ RustyTools.NumberToken.__test = function(t, r) {
 	]);
 
 	// Hex constructor
-	number = new RustyTools.NumberToken({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'});
+	number = new RustyTools.Translate.NumberTools({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'});
 	// don't care about numberInfo.expFirstChar if !number.exp,
 	expr = new RegExp(number.toRegExpStr());
 	t.test([
-			"NumberToken({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}); /* Hex */",
+			"Translate.NumberTools({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}); /* Hex */",
 			function(t, r) {r.same(number.prefix, '0[xX]');},
 			function(t, r) {r.same(number.numerals, '[0-9A-Fa-f]');},
 			function(t, r) {r.not(number.decimal);},
@@ -79,13 +79,13 @@ RustyTools.NumberToken.__test = function(t, r) {
 	]);
 };
 
-RustyTools.SymbolToken.__test = function(t, r) {
+RustyTools.Translate.SymbolToken.__test = function(t, r) {
 	// Default constructor
-	var symbol = new RustyTools.SymbolToken();
+	var symbol = new RustyTools.Translate.SymbolToken();
 	var expr = new RegExp(symbol.toRegExpStr());
 	t.test([
-			"RustyTools.SymbolToken.__test\n" +
-			"SymbolToken(); /* normal symbol */",
+			"RustyTools.Translate.SymbolToken.__test\n" +
+			"Translate.SymbolToken(); /* normal symbol */",
 			function(t, r) {r.not(symbol.prefix);},
 			function(t, r) {r.same(symbol.firstChar, '[A-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]');},
 			function(t, r) {r.same(symbol.chars, '[\\dA-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]');},
@@ -96,10 +96,10 @@ RustyTools.SymbolToken.__test = function(t, r) {
 	]);
 
 	// Ruby member variable
-	symbol = new RustyTools.SymbolToken({prefix: '@{1,2}'});
+	symbol = new RustyTools.Translate.SymbolToken({prefix: '@{1,2}'});
 	expr = new RegExp(symbol.toRegExpStr());
 	t.test([
-			"SymbolToken({prefix: '@{1,2}'}); /* Ruby member or class variable */",
+			"Translate.SymbolToken({prefix: '@{1,2}'}); /* Ruby member or class variable */",
 			function(t, r) {r.same(symbol.prefix, '@{1,2}');},
 			function(t, r) {r.same(symbol.firstChar, '[A-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]');},
 			function(t, r) {r.same(symbol.chars, '[\\dA-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]');},
@@ -111,10 +111,10 @@ RustyTools.SymbolToken.__test = function(t, r) {
 	]);
 
 	// Suffixed symbol
-	symbol = new RustyTools.SymbolToken({suffix: ':', canNotFollowNumber: ''});
+	symbol = new RustyTools.Translate.SymbolToken({suffix: ':', canNotFollowNumber: ''});
 	expr = new RegExp(symbol.toRegExpStr());
 	t.test([
-			"SymbolToken({suffix: ':', canNotFollowNumber: ''}); /* Suffixed symbol, anything is allowed after the : */",
+			"Translate.SymbolToken({suffix: ':', canNotFollowNumber: ''}); /* Suffixed symbol, anything is allowed after the : */",
 			function(t, r) {r.not(symbol.prefix);},
 			function(t, r) {r.same(symbol.firstChar, '[A-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]');},
 			function(t, r) {r.same(symbol.chars, '[\\dA-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]');},
@@ -127,22 +127,22 @@ RustyTools.SymbolToken.__test = function(t, r) {
 	]);
 };
 
-RustyTools.LiteralToken.__test = function(t, r) {
-	var symbol = new RustyTools.LiteralToken({prefix:'\\"', escape:'\\\\', suffix:'\\"'});
+RustyTools.Translate.LiteralToken.__test = function(t, r) {
+	var symbol = new RustyTools.Translate.LiteralToken({prefix:'\\"', escape:'\\\\', suffix:'\\"'});
 	var expr = new RegExp(symbol.toRegExpStr());
 	t.test([
-			"RustyTools.LiteralToken.__test\n" +
-			"LiteralToken({prefix:'\\\"', escape:'\\\\', suffix:'\\\"'}); /* \" string with \\escape */",
+			"RustyTools.Translate.LiteralToken.__test\n" +
+			"Translate.LiteralToken({prefix:'\\\"', escape:'\\\\', suffix:'\\\"'}); /* \" string with \\escape */",
 			function(t, r) {r.same(symbol.prefix, '\\"');},
 			function(t, r) {r.same(symbol.escape, '\\\\');},
 			function(t, r) {r.same(symbol.suffix, '\\"');},
 			function(t, r) {r.match(expr, 'xy"ab \\t\\v \\""cd', '"ab \\t\\v \\""');},
 			function(t, r) {r.noMatch(expr, '"ab \n"');},
 	]);
-	symbol = new RustyTools.LiteralToken({prefix:"\\'", suffix:"\\'"});
+	symbol = new RustyTools.Translate.LiteralToken({prefix:"\\'", suffix:"\\'"});
 	expr = new RegExp(symbol.toRegExpStr());
 	t.test([
-			"LiteralToken({prefix:\"'\", suffix:\"'\"}); /* ruby style '' strings */",
+			"Translate.LiteralToken({prefix:\"'\", suffix:\"'\"}); /* ruby style '' strings */",
 			function(t, r) {r.same(symbol.prefix, "\\'");},
 			function(t, r) {r.not(symbol.escape);},
 			function(t, r) {r.same(symbol.suffix, "\\'");},
@@ -151,20 +151,20 @@ RustyTools.LiteralToken.__test = function(t, r) {
 			function(t, r) {r.match(expr, "empty ''string", "''");},
 			function(t, r) {r.noMatch(expr, "xy'missing final quote");},
 	]);
-	symbol = new RustyTools.LiteralToken();
+	symbol = new RustyTools.Translate.LiteralToken();
 	expr = new RegExp(symbol.toRegExpStr());
 	t.test([
-			"LiteralToken(); /* // comment to end of line */",
+			"Translate.LiteralToken(); /* // comment to end of line */",
 			function(t, r) {r.same(symbol.prefix, '\\/\\/');},
 			function(t, r) {r.not(symbol.escape);},
 			function(t, r) {r.same(symbol.suffix, '(?=\\r\\n|\\n|\\r|$)');},
 			function(t, r) {r.match(expr, 'abc // test = more', '// test = more');},
 			function(t, r) {r.match(expr, 'abc // test = more\nend', '// test = more');},
 	]);
-	symbol = new RustyTools.LiteralToken({prefix:'<!--', suffix:'-->'});
+	symbol = new RustyTools.Translate.LiteralToken({prefix:'<!--', suffix:'-->'});
 	expr = new RegExp(symbol.toRegExpStr());
 	t.test([
-			"LiteralToken({prefix:'<!--', suffix:'-->''}); /* HTML comment */",
+			"Translate.LiteralToken({prefix:'<!--', suffix:'-->''}); /* HTML comment */",
 			function(t, r) {r.same(symbol.prefix, '<!--');},
 			function(t, r) {r.not(symbol.escape);},
 			function(t, r) {r.same(symbol.suffix, '-->');},
@@ -176,23 +176,23 @@ RustyTools.LiteralToken.__test = function(t, r) {
 	]);
 };
 
-RustyTools.Translator.__test = function(t, r) {
-	var translator = new RustyTools.Translator(['++', '+', '--', '-', '.', ',', '*', ';',
-			'//', '/', '(', ')', '{', '}', '%', '!', '===', '==', '=', '+=', '-=',
-			'*=', '/='],
-			['float', new RustyTools.NumberToken({decimal: '\\.', exp: '[eE]'}),
-			'octal', new RustyTools.NumberToken({prefix: '0', numerals: '[0-7]'}),
-			'hex', new RustyTools.NumberToken({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}),
-			'dec', new RustyTools.NumberToken(),
-			'symbol', new RustyTools.SymbolToken()], {}, {});
+RustyTools.Translate.__test = function(t, r) {
+	var translate = new RustyTools.Translate(['++', '+', '--', '-', '.', ',', '*', ';',
+			'//', '/', '%', '!', '===', '==', '=', '+=', '-=',
+			'*=', '/='], ['{', '}', '(', ')', '[', ']'],
+			['float', new RustyTools.Translate.NumberTools({decimal: '\\.', exp: '[eE]'}),
+			'octal', new RustyTools.Translate.NumberTools({prefix: '0', numerals: '[0-7]'}),
+			'hex', new RustyTools.Translate.NumberTools({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}),
+			'dec', new RustyTools.Translate.NumberTools(),
+			'symbol', new RustyTools.Translate.SymbolToken()], {}, {});
 
 	t.test([
-			"RustyTools.Translator.__test\n" +
-			"Translator constructor",
-			function(t, r) {r.same(translator.tokenTypes.length, 9);},
-			function(t, r) {r.different(translator.tokenizer, null);},
+			"RustyTools.Translate.__test\n" +
+			"Translate constructor",
+			function(t, r) {r.same(translate.tokenTypes.length, 10);},
+			function(t, r) {r.different(translate.tokenizer, null);},
 			function(t, r) {
-					var tokens = translator.extractTokens(
+					var tokens = translate.extractTokens(
 								'var x = function(one,two) {\n' +
 								'  y = one;\n' +
 								'  y += two;\n' +

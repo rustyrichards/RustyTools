@@ -63,10 +63,10 @@ RustyTools.Xhr = {
 						//sent to the onSuccess callback.
 					}
 					if (this.onSuccessCallback) this.onSuccessCallback.call(this.callbackContext,
-							convertedData, this.outputObject);
+							convertedData, this.outputObject, this.url);
 				} else {
 					if (this.onFailureCallback) this.onFailureCallback.call(this.callbackContext,
-							this.request, this.outputObject);
+							this.request, this.outputObject, this.url);
 					else try {
 						this.outputObject.innerHTML = this.request.responseText;
 					} catch (e) { }
@@ -110,7 +110,9 @@ RustyTools.Xhr = {
 			if (queryString) url += queryString;
 			xhrObject.query = null;
 		}
-		return url;
+
+		// Make sure the xhrObject.url contains the adjusted url!
+		return xhrObject.url = url;
 	},
 
 	httpRequest: function(inParamaters) {

@@ -334,7 +334,7 @@ RustyTools.Str = {
 		for (i=0; i<substObjs.length; i++) {
 			// We need to keep the source numbers as the substitutions may change the number values.
 			var substObj = substObjs[i];
-			if (opt_doNotChangeSubst) substObj = RustyTools.simpleObjCopy(substObj);
+			if (opt_doNotChangeSubst) substObj = RustyTools.cloneOneLevel(substObj);
 
 			// Order of replacement matters.
 			//  1) do the content matches
