@@ -62,6 +62,10 @@ RustyTools = {
 	// constantWrapper - clone the inputs into constData in a closure that has
 	// exclusive (private) access to constData, then reutrn an accessor to read
 	// a data item from the constData.
+	//
+	// Based on:
+	// http://stackoverflow.com/questions/130396/are-there-constants-in-javascript
+	// (Burke's answer)
 	constantWrapper: function(/* objects */) {
 		"use strict";
 		var constData = RustyTools.simpleObjCopy.apply(this,

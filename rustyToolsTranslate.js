@@ -31,8 +31,6 @@ RustyTools.Translate = function(punctuationAndOperators, grouping, tokens,
 	this.tokenTypes.push('lineBreak', 'whitespace');
 	var regexStr = '(\\r\\n|\\n)|([ \\f\\n\\r\\t\\v\\u00A0\\u2028\\u2029])';
 
-
-
 	for (var i=0; i<tokens.length; i++) {
 		this.tokenTypes.push(tokens[i++]);
 		regexStr += '|' + tokens[i].toRegExpStr();
@@ -126,7 +124,7 @@ RustyTools.Translate.prototype.showError = function(message, index, tokens) {
  *	lanuguageTree:  a language tree (obeject) - optional.  If lanuguageTree is
  *			set will push on the new language tree state.
  *	stack:  boolean - optional  (true= push, false = pop) Stack the
- 				languageTree and sumbolTable.
+				languageTree and sumbolTable.
  */
 RustyTools.Translate.prototype.translate_ = function(tokens, languageTree,
 		symbolTable, context, opt_fileName) {
@@ -135,12 +133,57 @@ RustyTools.Translate.prototype.translate_ = function(tokens, languageTree,
 	var symbolStack = [];
 	var output = [];
 	var index = 0;
-	var moreTokens = tokens.length + 2;
-	while (index <= moreTokens) {
-		var type = tokens[index].type;
+	while (index < tokens.length) {
+		index++;	// Skip the numeric values hera.
+		var token = tokens[index];
+		var type = token.tokenType;
+		var str = token.str;
 
-		var converted = languageTree[type](this, tokens, index, symbolTable, context);
+		// Count the depth on the grouping tokens
+		if ('grouping' === type) {
+			var groupingIndex = this.grouping.indexOf(str);
+			if (-1 < groupingIndex) {
+				if (groupingIndex & 1) {
+					// A closer
+					groupingIndex >>= 1;
+					// Too many closers will generate a -1 token.groupingCount, but the
+					// this.groupingCounts must pin at 0
+					if (0 > (token.groupingCount = --context.groupingCounts[groupingIndex])) {
+						context.groupingCounts[groupingIndex] = 0;
+					}
+				} else {
+					// An opener
+					token.groupingCount = context.groupingCounts[groupingIndex >> 1]++;
+				}
+			}
+		}
 
+		// Put the index into the token to make the object handling simpler.
+		token.index = index;
+
+		// Call the handler for the diven token type.
+		// In a syntax highlighter, the token type call could color the token,
+		// The later per-token str cal could determine the validity of the token.
+		var converted;
+		try {
+			converted = languageTree[type].call(languageTree, str, token,
+					context, symbolTable, tokens, this);
+		} catch(e) {
+			converted = {};
+		}
+
+		// Coud check to see that 'function' == typeof languageTree[str]
+		// but this needs a try ... catch anyway, so skip the extra step.
+		//
+		// If it exists call a handler for the given token string.
+		if (languageTree.hasOwnProperty(str)) {
+			try {
+				converted = languageTree[str].call(languageTree, converted,	str, token,
+					context, symbolTable, tokens, this);
+			} catch (e) {}
+		}
+
+		// Handle the output in "converted"
 		if (converted.unrecoverable) throw new SyntaxError(
 				'Fatal error at token: "' + tokens[index].str + '"',
 				opt_fileName || "unknown", index);
@@ -150,6 +193,8 @@ RustyTools.Translate.prototype.translate_ = function(tokens, languageTree,
 		if ('stack' in converted) {
 			if (converted.stack) {
 				languageStack.push(languageTree);
+				languageTree = converted.stack;
+
 				symbolStack.push(symbolTable);
 				symbolTable = RustyTools.cloneOneLevel(symbolTable);
 			} else {
@@ -159,7 +204,6 @@ RustyTools.Translate.prototype.translate_ = function(tokens, languageTree,
 		}
 
 		if (converted.lanuguageTree) languageTree = converted.lanuguageTree;
-
 		index++;
 	}
 
@@ -167,24 +211,31 @@ RustyTools.Translate.prototype.translate_ = function(tokens, languageTree,
 };
 
 /**
+ * translateTokens lower level than translate.  Sometimes
+ */
+RustyTools.Translate.prototype.translateTokens = function(tokens, opt_contextObject, opt_fileName) {
+	"use strict";
+	if (!opt_contextObject) opt_contextObject = {};
+
+	// Build the this.groupingCounts array
+	var len = this.grouping.length >> 1;
+	opt_contextObject.groupingCounts = new Array(len);
+	while (len--) opt_contextObject.groupingCounts[len] = 0;
+
+	var symbolTable = RustyTools.cloneOneLevel(this.initialSymbolTable);
+
+	return this.translate_(tokens, this.languageTree, symbolTable,
+			opt_contextObject, opt_fileName);
+};
+
+/**
  * translate takes in the source sting, tokenizes it, and then
  * uses translate_ to produce the output
  */
-RustyTools.Translate.prototype.translate = function(src, contextObject, opt_fileName) {
+RustyTools.Translate.prototype.translate = function(src, opt_contextObject, opt_fileName) {
 	"use strict";
-	if (!contextObject) contextObject = {};
-
-	var symbolTable = this.clone(this.initialSymbolTable);
 	var tokens = this.extractTokens(src);
-
-	var errorLocation = tokens.indexOf(0);
-	if (-1 !== errorLocation) {
-		this.showError("Unknown token", errorLocation, tokens);
-		return [];
-	} else {
-		return this.translate_(tokens, this.languageTree, symbolTable,
-				contextObject, opt_fileName);
-	}
+	return this.translateTokens(tokens, opt_contextObject, opt_fileName);
 };
 
 /**
@@ -199,7 +250,7 @@ RustyTools.Translate.prototype.tokenType = function(typeIndex) {
 	return this.tokenTypes[typeIndex];
 };
 
-RustyTools.Translate.NumberTools = function(numberInfo) {
+RustyTools.Translate.NumberToken = function(numberInfo) {
 	"use strict";
 	if (!numberInfo) numberInfo = {};
 	this.prefix = (undefined !== numberInfo.prefix) ? numberInfo.prefix : '';
@@ -217,7 +268,7 @@ RustyTools.Translate.NumberTools = function(numberInfo) {
 			'[\\dA-Z_a-z\\u0080-\\u2027\\u202a-\\uffff]';
 };
 
-RustyTools.Translate.NumberTools.prototype.toRegExpStr = function() {
+RustyTools.Translate.NumberToken.prototype.toRegExpStr = function() {
 	"use strict";
 	return '(' + this.prefix + this.numerals + '+' +
 			((this.decimal) ? ('(?:' + this.decimal + this.numerals + '*)') : '') +
@@ -266,4 +317,17 @@ RustyTools.Translate.LiteralToken.prototype.toRegExpStr = function() {
 		regExStr += '.*?)';
 	}
 	return regExStr + this.suffix;
+};
+
+/**
+ *.Translate.RegExpToken - When better tuning is needed.
+ */
+RustyTools.Translate.RegExpToken = function(regExStr) {
+	"use strict";
+	this.regExStr = regExStr;
+};
+
+RustyTools.Translate.RegExpToken.prototype.toRegExpStr = function() {
+	"use strict";
+	return this.regExStr;
 };

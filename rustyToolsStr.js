@@ -326,7 +326,7 @@ RustyTools.Str = {
 	multiReplace: function(str, substObjs, opt_skipEncoding, opt_doNotChangeSubst) {
 		"use strict";
 		var matches = {};
-		var result = '';
+		var result = str;
 		var i;
 		var j;
 
@@ -344,7 +344,7 @@ RustyTools.Str = {
 
 			// Match <#id>...</#id>
 			var context = this;
-			var replaced = str.replace(/<#([^\/>]+)>([\s\S]*)<\/#\1>/g,
+			var result = result.replace(/<#([^\/>]+)>([\s\S]*)<\/#\1>/g,
 				function(match, keys, content) {
 					var keys = keys.split(',')
 					for (j=0; j<keys.length; j++) {
@@ -376,7 +376,7 @@ RustyTools.Str = {
 				});
 
 			// Match <#id/> or <+id/>
-			result += replaced.replace(/<(#|\+)([^\/>]+)\/>/g,
+			result = result.replace(/<(#|\+)([^\/>]+)\/>/g,
 				function(match, symbol, key) {
 					var retVal = match;
 					if (key in substObj) {

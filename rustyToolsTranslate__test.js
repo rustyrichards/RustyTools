@@ -1,13 +1,13 @@
 // The testers have a lot of tiny functons - use the whole script "use strict".
 "use strict";
 
-RustyTools.Translate.NumberTools.__test = function(t, r) {
+RustyTools.Translate.NumberToken.__test = function(t, r) {
 	// Decimal constructor
-	var number = new RustyTools.Translate.NumberTools({decimal: '\\.', exp: '[eE]'});
+	var number = new RustyTools.Translate.NumberToken({decimal: '\\.', exp: '[eE]'});
 	var expr = new RegExp(number.toRegExpStr());
 	t.test([
-			"RustyTools.Translate.NumberTools.__test\n" +
-			"Translate.NumberTools({decimal: '\\.', exp: '[eE]'}); /* floating point */",
+			"RustyTools.Translate.NumberToken.__test\n" +
+			"Translate.NumberToken({decimal: '\\.', exp: '[eE]'}); /* floating point */",
 			function(t, r) {r.not(number.prefix);},
 			function(t, r) {r.same(number.numerals, '[0-9]');},
 			function(t, r) {r.same(number.nonZero, '[1-9]');},
@@ -26,11 +26,11 @@ RustyTools.Translate.NumberTools.__test = function(t, r) {
 	]);
 
 	// Default constructor
-	number = new RustyTools.Translate.NumberTools();
+	number = new RustyTools.Translate.NumberToken();
 	// don't care about numberInfo.expPrefix if !number.exp,
 	expr = new RegExp(number.toRegExpStr());
 	t.test([
-			"Translate.NumberTools(); /* integer */",
+			"Translate.NumberToken(); /* integer */",
 			function(t, r) {r.not(number.prefix);},
 			function(t, r) {r.same(number.numerals, '[0-9]');},
 			function(t, r) {r.not(number.decimal);},
@@ -45,11 +45,11 @@ RustyTools.Translate.NumberTools.__test = function(t, r) {
 	]);
 
 	// Octal constructor
-	number = new RustyTools.Translate.NumberTools({prefix: '0', numerals: '[0-7]'});
+	number = new RustyTools.Translate.NumberToken({prefix: '0', numerals: '[0-7]'});
 	// don't care about numberInfo.expFirstChar if !number.exp,
 	expr = new RegExp(number.toRegExpStr());
 	t.test([
-			"Translate.NumberTools({prefix: '0', numerals: '[0-7]'}); /* octal */",
+			"Translate.NumberToken({prefix: '0', numerals: '[0-7]'}); /* octal */",
 			function(t, r) {r.same(number.prefix, '0');},
 			function(t, r) {r.same(number.numerals, '[0-7]');},
 			function(t, r) {r.not(number.decimal);},
@@ -63,11 +63,11 @@ RustyTools.Translate.NumberTools.__test = function(t, r) {
 	]);
 
 	// Hex constructor
-	number = new RustyTools.Translate.NumberTools({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'});
+	number = new RustyTools.Translate.NumberToken({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'});
 	// don't care about numberInfo.expFirstChar if !number.exp,
 	expr = new RegExp(number.toRegExpStr());
 	t.test([
-			"Translate.NumberTools({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}); /* Hex */",
+			"Translate.NumberToken({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}); /* Hex */",
 			function(t, r) {r.same(number.prefix, '0[xX]');},
 			function(t, r) {r.same(number.numerals, '[0-9A-Fa-f]');},
 			function(t, r) {r.not(number.decimal);},
@@ -180,21 +180,26 @@ RustyTools.Translate.__test = function(t, r) {
 	var translate = new RustyTools.Translate(['++', '+', '--', '-', '.', ',', '*', ';',
 			'//', '/', '%', '!', '===', '==', '=', '+=', '-=',
 			'*=', '/='], ['{', '}', '(', ')', '[', ']'],
-			['float', new RustyTools.Translate.NumberTools({decimal: '\\.', exp: '[eE]'}),
-			'octal', new RustyTools.Translate.NumberTools({prefix: '0', numerals: '[0-7]'}),
-			'hex', new RustyTools.Translate.NumberTools({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}),
-			'dec', new RustyTools.Translate.NumberTools(),
+			['blockComment',  new RustyTools.Translate.LiteralToken({prefix:'/\\*', suffix:'\\*/'}),
+			'comment',  new RustyTools.Translate.LiteralToken(),
+			'float', new RustyTools.Translate.NumberToken({decimal: '\\.', exp: '[eE]'}),
+			'octal', new RustyTools.Translate.NumberToken({prefix: '0', numerals: '[0-7]'}),
+			'hex', new RustyTools.Translate.NumberToken({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}),
+			'dec', new RustyTools.Translate.NumberToken(),
 			'symbol', new RustyTools.Translate.SymbolToken()], {}, {});
 
 	t.test([
 			"RustyTools.Translate.__test\n" +
-			"Translate constructor",
-			function(t, r) {r.same(translate.tokenTypes.length, 10);},
+			"Translate.extractTokens",
+			function(t, r) {r.same(translate.tokenTypes.length, 12);},
 			function(t, r) {r.different(translate.tokenizer, null);},
 			function(t, r) {
 					var tokens = translate.extractTokens(
+								'/*\n' +
+								'Block comment\n' +
+								'*/\n' +
 								'var x = function(one,two) {\n' +
-								'  y = one;\n' +
+								'  y = one;  // Start at one\n' +
 								'  y += two;\n' +
 								'  y += 3.14;\n' +
 								'  y += 6.02e+23;\n' +
