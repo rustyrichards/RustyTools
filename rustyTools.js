@@ -5,39 +5,54 @@ Note:   cloneOneLevel will reserence/alias the objects.  This is to prevent infi
 				RustyTools.cloneOneLevel can not be in the object notation because it must be called - see below.
 **********/
 RustyTools = {
-	cloneOneLevel: function(/* objects */) {
+	// addOneLevel - copies object members onto dest.
+	//
+	// Only clones the top level! This prevents infinite loops, but lower level
+	// objects are referenced/aliased.
+	addOneLevel: function(dest /* objects */) {
 		"use strict";
-		var result = {};
-		for (var i=0; i<arguments.length; i++) {
+		for (var i=1; i<arguments.length; i++) {
 			var toClone = arguments[i];
+			if ('object' !== typeof toClone) {
+				throw new TypeError('RustyTools.addOneLevel called on a non-object.');
+			}
+
 			if (toClone) {
 				for (var key in toClone) {
 					if (toClone.hasOwnProperty(key)) {
 						var property = toClone[key];
 						if (property instanceof Function) {
 							// Alias function objects do not deep copy
-							result[key] = property;
+							dest[key] = property;
 						} else if (property instanceof RegExp) {
 							// Alias all RegExp
-							result[key] = property;
+							dest[key] = property;
 						} else if (property instanceof Array) {
 							// Array - append all the array values.
-							if (!(result[key] instanceof Array)) result[key] = [];
-							result[key] = result[key].concat(property);
+							if (!(dest[key] instanceof Array)) dest[key] = [];
+							dest[key] = dest[key].concat(property);
 						} else if (property instanceof Object) {
-							// Object - for all items in config  replace those entries in result.
-							if (!(result[key] instanceof Object)) result[key] = {};
+							// Object - for all items in config  replace those entries in dest.
+							if (!(dest[key] instanceof Object)) dest[key] = {};
 							for (var j in property) {
-								if (property.hasOwnProperty(j)) result[key][j] = property[j];
+								if (property.hasOwnProperty(j)) dest[key][j] = property[j];
 							}
 						} else {
-							result[key] = property;
+							dest[key] = property;
 						}
 					}
 				}
 			}
 		}
-		return result;
+		return dest;
+	},
+
+	cloneOneLevel: function(/* objects */) {
+		"use strict";
+		var params = Array.prototype.slice.call(arguments, 0);
+		params.unshift({});
+
+		return this.addOneLevel.apply(this, params);
 	},
 
 	// simpleObjCopy will copy only the numbers, booleans, and strings.
@@ -47,6 +62,10 @@ RustyTools = {
 		for (var i=0; i<arguments.length; i++) {
 			var toClone = arguments[i];
 			if (toClone) {
+				if ('object' !== typeof toClone) {
+					throw new TypeError('RustyTools.simpleObjCopy called on a non-object.');
+				}
+
 				for (var key in toClone) {
 					// No hasOwnProperty check.  This will copy base class members too.
 					var type = typeof toClone[key];
@@ -71,7 +90,16 @@ RustyTools = {
 		var constData = RustyTools.simpleObjCopy.apply(this,
 				Array.prototype.slice.call(arguments, 0));
 
-		return function(key) {return constData[key];};
+		var wrapper = function(key) {return constData[key];};
+
+		// A function is an object, so it can have properties/methods too.
+		// subclass will add (optionally) more constants.
+		wrapper.subclass = function(/* objects */) {
+			var params = Array.prototype.slice.call(arguments, 0);
+			params.unshift(constData);
+			return RustyTools.constantWrapper.apply(RustyTools, params);
+		}
+		return wrapper;
 	},
 
 	log: function() {
@@ -106,8 +134,8 @@ RustyTools = {
 	configure: function(/* config object(s) */) {
 		"use strict";
 		var callParams = Array.prototype.slice.call(arguments, 0);
-		callParams.unshift(this.cfg);
-		this.cfg = RustyTools.cloneOneLevel.apply(this, callParams);
+		callParams.unshift((this.cfg) ? this.cfg : {});
+		this.cfg = RustyTools.addOneLevel.apply(this, callParams);
 	},
 
 	/*
@@ -122,34 +150,34 @@ RustyTools = {
 		return new InheritWrapper();
 	},
 
-	isEnabled: function(xpathOrJQuery) {
+	isEnabled: function(xpathOrCSSQuery) {
 		"use strict";
-		var enabled = false;
+		var enabled;	// undefined - false but not === false
 		var el;
 
-		// NOTE: document.evaluate / xpath is not supported by I.E
-		if (self.document && self.document.evaluate && -1 < xpathOrJQuery.search(/\//)) {
-			var elements = self.document.evaluate(xpathOrJQuery, self.document, null,
+		// NOTE: document.evaluate / xpath is not supported by I.E.!
+		if (self.document && self.document.evaluate && -1 < xpathOrCSSQuery.search(/\//)) {
+			var elements = self.document.evaluate(xpathOrCSSQuery, self.document, null,
 					self.XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
 			try {
 				while ((el = elements.iterateNext()) && (enabled = !el.disabled));
 			} catch (e) {}
 		} else {
-			var hasJQuery = false;
-			try {
-				hasJQuery = 'function' === typeof $;
-			} catch (e) {}
-			if (hasJQuery) {
-				$(xpathOrJQuery).each(function(inedex, element){
-					enabled = !element.disabled;
-					return enabled;
-				});
-			} else if ('#' === xpathOrJQuery[0] && self.document) {
-				el = self.document.getElementById(xpathOrJQuery.substr(1));
+			if ('function' === typeof document.querySelectorAll) {
+				// NOTE: querySelectorAll returns a NodeList that is array like, but not
+				// actually an array.
+				var nodeList = document.querySelectorAll(xpathOrCSSQuery);
+				var index = nodeList.length;
+				enabled = !!nodeList.length;
+				while ((false !== enabled) && index--) {
+					enabled = !nodeList[index].disabled;
+				}
+			} else if ('#' === xpathOrCSSQuery[0] && self.document) {
+				el = self.document.getElementById(xpathOrCSSQuery.substr(1));
 				enabled = el && !el.disabled;
 			}
 		}
-		return enabled;
+		return !!enabled;
 	},
 
 	// See if object in indexable.

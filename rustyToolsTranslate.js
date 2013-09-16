@@ -7,14 +7,14 @@
 */
 /**
  * @param   punctuationAndOperators - an array strings of the operators and punctuation.
+ * @param   assignment - an array of assignment strings.
  * @param   grouping - an array strings of group open and close.  (The depth
  *					of opening will be tracked.)
- * @param   tokens - an array of description followed by Symbol, Number ot literal.
- * @param   languageTreeRoot - the root of the parsing tree.
- * @param   symbolTable - optional the pre-defined symbols.
+ * @param   tokenMatch - an array of description followed by SymbolToken,
+ *					NumberToken, LiteralToken or RegExpToken.
  */
-RustyTools.Translate = function(punctuationAndOperators, grouping, tokens,
-		languageTreeRoot, symbolTable) {
+RustyTools.Translate = function(punctuationAndOperators, assignment, grouping,
+		tokens) {
 	"use strict";
 	// Convert the punctuationAndOperators into a regexp to crack the input
 	// string into punctuation tokens.
@@ -23,23 +23,47 @@ RustyTools.Translate = function(punctuationAndOperators, grouping, tokens,
 	punct = RustyTools.Str.regExpEscape(punct).replace(/\n/g, '|');
 
 	this.grouping = grouping || [];
-	var groups = RustyTools.Str.regExpEscape(this.grouping.join('\n')).
-			replace(/\n/g, '|');
+	var groups = ''
+	if (!Array.isArray(grouping)) {
+		throw new TypeError('RustyTools.Translate "grouping" was not an array');
+	}
+	if (this.grouping.length) {
+		groups = RustyTools.Str.regExpEscape(this.grouping.join('\n')).
+				replace(/\n/g, '|');
+	}
 
-	// NOTE: 0 = invalid, 1 = lineBreak, 2 = whitespace
+	if (!assignment) assignment = [];
+	var assignmentTokens = '';
+	if (!Array.isArray(assignment)) {
+		throw new TypeError('RustyTools.Translate "assignment" was not an array');
+	}
+	if (assignment.length) {
+		assignmentTokens = RustyTools.Str.regExpEscape(assignment.join('\n')).
+				replace(/\n/g, '|');
+	}
+
+	// NOTE: 0 = invalid
 	this.tokenTypes = ['invalid'];
-	this.tokenTypes.push('lineBreak', 'whitespace');
-	var regexStr = '(\\r\\n|\\n)|([ \\f\\n\\r\\t\\v\\u00A0\\u2028\\u2029])';
+	var regexStr = '';
 
 	for (var i=0; i<tokens.length; i++) {
 		this.tokenTypes.push(tokens[i++]);
-		regexStr += '|' + tokens[i].toRegExpStr();
+		if (regexStr.length) regexStr += '|';
+		regexStr += tokens[i].toRegExpStr();
 	}
+
+	this.tokenTypes.push('lineBreak', 'whitespace');
+	regexStr += '|(\\r\\n|\\n)|([ \\f\\n\\r\\t\\v\\u00A0\\u2028\\u2029])';
 
 	this.tokenTypes.push('punctuation');
 	regexStr += '|(' + punct + ')';
 
-	if (groups) {
+	if (assignmentTokens) {
+		this.tokenTypes.push('assignment');
+		regexStr += '|(' + assignmentTokens + ')';
+	}
+
+	if (this.grouping.length) {
 		this.tokenTypes.push('grouping');
 		regexStr += '|(' + groups + ')';
 	}
@@ -49,9 +73,9 @@ RustyTools.Translate = function(punctuationAndOperators, grouping, tokens,
 
 
 	this.tokenizer = new RegExp(regexStr, 'g');
-
-	this.languageTree = languageTreeRoot;
-	this.initialSymbolTable = symbolTable || {};
+	try {
+		this.tokenizer.compile(regexStr, 'g');
+	} catch (e) {}	// It is OK if compile does not work, the regex just runs slower.
 };
 
  // NOTE: indixes - 0 = invalid, 1 = lineBreak, 2 = whitespace
@@ -61,17 +85,33 @@ RustyTools.Translate = function(punctuationAndOperators, grouping, tokens,
 	"whitespace"
 ];
 
-RustyTools.Translate.Token = function(tokenType, token, line, position) {
+RustyTools.Translate.Token = function(tokenType, tokenStr, line, position) {
 	"use strict";
-	this.tokenType = tokenType;
-	this.str = token;
+	this.type = tokenType;
+	this.str = tokenStr;
 	this.line = line;
 	this.position = position;
+
+	this.error = false;
+};
+
+RustyTools.Translate.Token.prototype.setError = function(opt_typeChange) {
+	"use strict";
+	// Error overrides subtype.
+	if (opt_typeChange) this.type = opt_typeChange;
+	this.error = true;
+};
+
+RustyTools.Translate.Token.prototype.getSubType = function() {
+	"use strict";
+	// Error overrides subtype.
+	if (this.error) return this.type;
+	return this.subType || this.type;
 };
 
 RustyTools.Translate.reverseAsciibetical  = function(a, b) {
 	"use strict";
-	return (b < a) ? -1 : b = a ? 0 : 1;
+	return (b < a) ? -1 : ((a < b) ? 1 : 0);
 };
 
 /**
@@ -90,11 +130,11 @@ RustyTools.Translate.prototype.extractTokens = function(input) {
 		for (var i=1; i<result.length; i++) {
 			if (result[i]) {
 				// 0 = invalid is a tokenizer error.
-				var tokenType = (this.tokenTypes.length > i) ? i : 0;
-				output.push(tokenType);
-				output.push(new RustyTools.Translate.Token(this.tokenType(tokenType),
+				var type = (this.tokenTypes.length > i) ? i : 0;
+				output.push(type);
+				output.push(new RustyTools.Translate.Token(this.type(type),
 						result[i], line, pos));
-				if (1 === tokenType) {
+				if (1 === type) {
 					// lineBreak
 					line++;
 					pos = 1;
@@ -123,8 +163,8 @@ RustyTools.Translate.prototype.showError = function(message, index, tokens) {
  *			will concatinate to the array or output.
  *	lanuguageTree:  a language tree (obeject) - optional.  If lanuguageTree is
  *			set will push on the new language tree state.
- *	stack:  boolean - optional  (true= push, false = pop) Stack the
-				languageTree and sumbolTable.
+ *	stack:  - optional  IT stack is falsy this will pop the lanugageTree stack.
+ *			If it has an object, the object will be pushed as the new language tree.
  */
 RustyTools.Translate.prototype.translate_ = function(tokens, languageTree,
 		symbolTable, context, opt_fileName) {
@@ -136,7 +176,7 @@ RustyTools.Translate.prototype.translate_ = function(tokens, languageTree,
 	while (index < tokens.length) {
 		index++;	// Skip the numeric values hera.
 		var token = tokens[index];
-		var type = token.tokenType;
+		var type = token.type;
 		var str = token.str;
 
 		// Count the depth on the grouping tokens
@@ -213,7 +253,8 @@ RustyTools.Translate.prototype.translate_ = function(tokens, languageTree,
 /**
  * translateTokens lower level than translate.  Sometimes
  */
-RustyTools.Translate.prototype.translateTokens = function(tokens, opt_contextObject, opt_fileName) {
+RustyTools.Translate.prototype.translateTokens = function(tokens, languageTree,
+		symbolTable, opt_contextObject, opt_fileName) {
 	"use strict";
 	if (!opt_contextObject) opt_contextObject = {};
 
@@ -222,9 +263,7 @@ RustyTools.Translate.prototype.translateTokens = function(tokens, opt_contextObj
 	opt_contextObject.groupingCounts = new Array(len);
 	while (len--) opt_contextObject.groupingCounts[len] = 0;
 
-	var symbolTable = RustyTools.cloneOneLevel(this.initialSymbolTable);
-
-	return this.translate_(tokens, this.languageTree, symbolTable,
+	return this.translate_(tokens, languageTree, symbolTable,
 			opt_contextObject, opt_fileName);
 };
 
@@ -232,19 +271,21 @@ RustyTools.Translate.prototype.translateTokens = function(tokens, opt_contextObj
  * translate takes in the source sting, tokenizes it, and then
  * uses translate_ to produce the output
  */
-RustyTools.Translate.prototype.translate = function(src, opt_contextObject, opt_fileName) {
+RustyTools.Translate.prototype.translate = function(src, languageTree,
+		symbolTable, opt_contextObject, opt_fileName) {
 	"use strict";
 	var tokens = this.extractTokens(src);
-	return this.translateTokens(tokens, opt_contextObject, opt_fileName);
+	return this.translateTokens(tokens, languageTree, symbolTable,
+			opt_contextObject, opt_fileName);
 };
 
 /**
- * tokenType - Convert the token numeric type to its string.  0 is always the
+ * type - Convert the token numeric type to its string.  0 is always the
  *             error 'invalid'
  *
  * @return  string
  */
-RustyTools.Translate.prototype.tokenType = function(typeIndex) {
+RustyTools.Translate.prototype.type = function(typeIndex) {
 	"use strict";
 	if (0 > typeIndex || this.tokenTypes.length <= typeIndex) typeIndex = 0;
 	return this.tokenTypes[typeIndex];
@@ -310,13 +351,29 @@ RustyTools.Translate.LiteralToken = function(symbolInfo) {
 
 RustyTools.Translate.LiteralToken.prototype.toRegExpStr = function() {
 	"use strict";
-	var regExStr = this.prefix + '(';
-	if ((this.escape)) {
-		regExStr += '(?:(?:' + this.escape + ')?.)*?)';
+	var regExStr = '(' + this.prefix;
+
+	if (1 === this.suffix.length && 1 >= this.escape.length) {
+		// Single char suffix - the easy way
+		if ((this.escape)) {
+			// The escape really should be just 1 character!
+			regExStr += '(?:' + this.escape +
+					'[\\s\\S]|[^' + this.escape + this.suffix + '])*';
+		} else {
+			regExStr += '[^' + this.suffix + ']*';
+		}
 	} else {
-		regExStr += '.*?)';
+		// Multi-character suffix or multi-character escape.
+		// (Multi-character escape?  Should work, but it seems like a really bad idea.)
+		if ((this.escape)) {
+			regExStr += '(?:' + this.escape +
+					'[\\s\\S]|(?!' + this.escape + '|' + this.suffix + ')[\\s\\S])*';
+		} else {
+			regExStr += '(?:(?!' + this.suffix + ')[\\s\\S])*';
+		}
 	}
-	return regExStr + this.suffix;
+
+	return regExStr + this.suffix + ')';
 };
 
 /**
@@ -331,3 +388,51 @@ RustyTools.Translate.RegExpToken.prototype.toRegExpStr = function() {
 	"use strict";
 	return this.regExStr;
 };
+
+RustyTools.StateStack = function(statesOrStateObject, startingState) {
+	this.states = ('function' === typeof statesOrStateObject) ?
+			statesOrStateObject : RustyTools.constantWrapper(statesOrStateObject);
+	this.startingState = startingState;
+
+	this.stack = [this.states(this.startingState)];
+};
+
+/*
+ * StateStack.prototype all operations are on the top/last of the stack
+ */
+RustyTools.StateStack.prototype.get = function() {
+	return (this.stack.length) ? this.stack[this.stack.length - 1] : 0;
+};
+
+RustyTools.StateStack.prototype.set = function(key) {
+	var value = this.states(key);
+	if (!this.stack.length) this.stack.push(value);
+	this.stack[this.stack.length - 1] = value;
+};
+
+RustyTools.StateStack.prototype.is = function(key) {
+	return (this.stack[this.stack.length - 1] === this.states(key));
+};
+
+RustyTools.StateStack.prototype.push = function(opt_key) {
+	return this.stack.push(this.states(opt_key || this.startingState));
+};
+
+RustyTools.StateStack.prototype.pop = function() {
+	return this.stack.pop();
+};
+
+RustyTools.StateStack.prototype.progressState = function(matchedState,
+		unmatchedState /*, test states */) {
+	var currentState = this.stack[this.stack.length - 1];
+	var found = false;
+	for (var i=1; !found && i<arguments.length; i++) {
+		found = currentState === this.states(arguments[i]);
+
+	}
+	var nextState = this.states((found) ? matchedState : unmatchedState);
+	if (nextState) this.stack[this.stack.length - 1] = nextState;
+
+	return found;
+};
+

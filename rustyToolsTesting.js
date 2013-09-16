@@ -30,10 +30,11 @@ RustyTools.Testing.Record = function(description, test) {
   this.test = test;
 };
 
-RustyTools.Testing.Record.prototype.addError = function(error) {
+RustyTools.Testing.Record.prototype.addError = function(str /* objects */) {
 	"use strict";
-  if (this.error) this.error += '\n' + error;
-  else this.error = error;
+  if (this.error) this.error += '\n';
+  this.error = RustyTools.Str.mulitReplaceCleanup(RustyTools.Str.multiReplace(
+      str, Array.prototype.slice.call(arguments, 1), true /*don't entitize here*/));
 };
 
 RustyTools.Testing.Record.prototype.addException = function(e) {
@@ -81,9 +82,8 @@ RustyTools.Testing.Record.prototype.match = function(expr, str, opt_match) {
   // If opt_match is supplied make sure is is the same as the full find result.
   // If opt-match is not supplied just make sure that something was found.
   if ((opt_match) ? (opt_match !== found[0]) : !found.length) {
-    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.matchFail, {regex: expr.toString(),
-        source: RustyTools.Str.quote(str), match: RustyTools.Str.quote(found[0]),
-        shouldMatch: RustyTools.Str.quote(opt_match)}));
+    this.addError(RustyTools.cfg.matchFail, {regex: expr.toString(),
+        source: str, match: found[0],shouldMatch:opt_match});
     this.failed = true;
   }
 
@@ -101,9 +101,8 @@ RustyTools.Testing.Record.prototype.noMatch = function(expr, str) {
   this.tested = true;
   var found = expr.find(str);
   if (found.length) {
-    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.noMatchFail,
-        {regex: expr.toString(), source: RustyTools.Str.quote(str),
-          match: RustyTools.Str.quote(found[0])}));
+    this.addError(RustyTools.cfg.noMatchFail,  {regex: expr.toString(),
+        source: str, match: found[0]});
     this.failed = true;
   }
 
@@ -121,7 +120,7 @@ RustyTools.Testing.Record.prototype.same = function(a, b) {
   }
   // a != b - want the type coercion here
   if (a != b) {
-    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.sameFail, {1: a, 2: b}));
+    this.addError(RustyTools.cfg.sameFail, {1: a, 2: b});
     this.failed = true;
   }
 
@@ -141,7 +140,7 @@ RustyTools.Testing.Record.prototype.different = function(a, b) {
   }
   // a == b - want the type coercion here
   if (a == b) {
-    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.differentFail, {1: a, 2: b}));
+    this.addError(RustyTools.cfg.differentFail, {1: a, 2: b}, true);
     this.failed = true;
   }
 
@@ -152,7 +151,7 @@ RustyTools.Testing.Record.prototype.not = function(a) {
 	"use strict";
   this.tested = true;
   if (a) {
-    this.addError(RustyTools.Str.multiReplace(RustyTools.cfg.notFail, {val: a}));
+    this.addError(RustyTools.cfg.notFail, {val: a});
     this.failed = true;
   }
 

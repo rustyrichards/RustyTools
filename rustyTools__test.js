@@ -96,8 +96,21 @@ RustyTools.__test = function(t, r) {
 			var source = {a:'one', b:2.2};
 			var wrapper = RustyTools.constantWrapper(source);
 
-			// Changing a str or number in shource should not change clone.
+			// Changing a str or number in shource should not change constantWrapper.
+			source.b = "two";
 			r.same(wrapper('a'), 'one').same(wrapper('b'), 2.2).not(wrapper('c'));
+		},
+
+		'RustyTools.constantWrapper - subclass',
+		function(t, r) {
+			// Make an constantWrapper, and check that it handles known and unknown keys.
+			var source = {a:'one', b:2.2};
+			var wrapper = RustyTools.constantWrapper(source);
+			wrapper = wrapper.subclass({a:'1', c:'three'})
+
+			// Changing a str or number in shource should not change constantWrapper.
+			source.b = "two";
+			r.same(wrapper('a'), 1).same(wrapper('b'), 2.2).same(wrapper('c'), 'three');
 		},
 
 		'RustyTools.simpleObjCopy',

@@ -383,7 +383,11 @@ RustyTools.Str = {
 						if ('+' === symbol) {
 							retVal = RustyTools.Str.toString(substObj[key]++);
 						} else {
-							retVal =  RustyTools.Str.toString(substObj[key]);
+							var val = substObj[key];
+							// Can't just rely on RustyTools.Str.toString member functions
+							// must be called from the appropriate object.
+							if ('function' === typeof val) val = substObj[key].call(substObj);
+							retVal =  RustyTools.Str.toString(val);
 						}
 						if (!opt_skipEncoding) retVal = RustyTools.Str.entitize(retVal);
 					}

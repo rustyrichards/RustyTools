@@ -128,24 +128,24 @@ RustyTools.Translate.SymbolToken.__test = function(t, r) {
 };
 
 RustyTools.Translate.LiteralToken.__test = function(t, r) {
-	var symbol = new RustyTools.Translate.LiteralToken({prefix:'\\"', escape:'\\\\', suffix:'\\"'});
+	var symbol = new RustyTools.Translate.LiteralToken({prefix:'"', escape:'\\\\', suffix:'"'});
 	var expr = new RegExp(symbol.toRegExpStr());
 	t.test([
 			"RustyTools.Translate.LiteralToken.__test\n" +
-			"Translate.LiteralToken({prefix:'\\\"', escape:'\\\\', suffix:'\\\"'}); /* \" string with \\escape */",
-			function(t, r) {r.same(symbol.prefix, '\\"');},
+			"Translate.LiteralToken({prefix:'\"', escape:'\\\\', suffix:'\"'}); /* \" string with \\escape */",
+			function(t, r) {r.same(symbol.prefix, '"');},
 			function(t, r) {r.same(symbol.escape, '\\\\');},
-			function(t, r) {r.same(symbol.suffix, '\\"');},
+			function(t, r) {r.same(symbol.suffix, '"');},
 			function(t, r) {r.match(expr, 'xy"ab \\t\\v \\""cd', '"ab \\t\\v \\""');},
-			function(t, r) {r.noMatch(expr, '"ab \n"');},
+			function(t, r) {r.noMatch(expr, '"ab \\"');},
 	]);
-	symbol = new RustyTools.Translate.LiteralToken({prefix:"\\'", suffix:"\\'"});
+	symbol = new RustyTools.Translate.LiteralToken({prefix:"'", suffix:"'"});
 	expr = new RegExp(symbol.toRegExpStr());
 	t.test([
-			"Translate.LiteralToken({prefix:\"'\", suffix:\"'\"}); /* ruby style '' strings */",
-			function(t, r) {r.same(symbol.prefix, "\\'");},
+			"Translate.LiteralToken({prefix: \"'\", suffix: \"'\"}); /* ruby style '' strings */",
+			function(t, r) {r.same(symbol.prefix, "'");},
 			function(t, r) {r.not(symbol.escape);},
-			function(t, r) {r.same(symbol.suffix, "\\'");},
+			function(t, r) {r.same(symbol.suffix, "'");},
 			function(t, r) {r.match(expr, "'ab cd ef'", "'ab cd ef'");},
 			function(t, r) {r.match(expr, "xy'ab cd ef'gh", "'ab cd ef'");},
 			function(t, r) {r.match(expr, "empty ''string", "''");},
@@ -178,20 +178,21 @@ RustyTools.Translate.LiteralToken.__test = function(t, r) {
 
 RustyTools.Translate.__test = function(t, r) {
 	var translate = new RustyTools.Translate(['++', '+', '--', '-', '.', ',', '*', ';',
-			'//', '/', '%', '!', '===', '==', '=', '+=', '-=',
-			'*=', '/='], ['{', '}', '(', ')', '[', ']'],
+			'//', '/', '%', '!', '===', '=='],
+			['=', '+=', '-=','*=', '/='],	// assignment
+			['{', '}', '(', ')', '[', ']'], // grouping
 			['blockComment',  new RustyTools.Translate.LiteralToken({prefix:'/\\*', suffix:'\\*/'}),
 			'comment',  new RustyTools.Translate.LiteralToken(),
 			'float', new RustyTools.Translate.NumberToken({decimal: '\\.', exp: '[eE]'}),
 			'octal', new RustyTools.Translate.NumberToken({prefix: '0', numerals: '[0-7]'}),
 			'hex', new RustyTools.Translate.NumberToken({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}),
 			'dec', new RustyTools.Translate.NumberToken(),
-			'symbol', new RustyTools.Translate.SymbolToken()], {}, {});
+			'symbol', new RustyTools.Translate.SymbolToken()]);
 
 	t.test([
 			"RustyTools.Translate.__test\n" +
 			"Translate.extractTokens",
-			function(t, r) {r.same(translate.tokenTypes.length, 12);},
+			function(t, r) {r.same(translate.tokenTypes.length, 13);},
 			function(t, r) {r.different(translate.tokenizer, null);},
 			function(t, r) {
 					var tokens = translate.extractTokens(
