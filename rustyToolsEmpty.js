@@ -1,1 +1,0 @@
-RustyTools.Empty = {};
