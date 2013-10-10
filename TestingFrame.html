@@ -10,17 +10,18 @@
 			.report-style .passed {border-color:#080;}
 			.testFrame.json {border-color:#AAA;}
 			.report-style .description {font-weight:bold;}
-					.report-style .test {margin-bottom: 1em;}
-					.report-style .log {margin-left: 2em; color: #446;}
-					.report-style .error {margin-left: 2em; color: #800;}
-					.report-style .exception {margin-left: 2em; color: #800;}
+			.report-style .test {margin-bottom: 1em;}
+			.report-style .log {margin-left: 2em; color: #446;}
+			.report-style .error {margin-left: 2em; color: #800;}
+			.report-style .exception {margin-left: 2em; color: #800;}
 		</style>
 	</head>
 	<body>
 		<div class="report-style" id="report"></div>
-		<div class="testFrame json" id="json"></div>
+		<div class="testFrame json" id="json"><div><div></div></div></div>
 		<script src="rustyTools.js"></script>
 		<script>RustyTools.configure({test: true});</script>
+		<script src="rustyToolsEvents.js"></script>
 		<script src="rustyToolsFn.js"></script>
 		<script src="rustyToolsStr.js"></script>
 		<script src="rustyToolsTree.js"></script>
@@ -28,6 +29,7 @@
 		<script src="rustyToolsTesting.js"></script>
 		<script src="rustyToolsXhr.js"></script>
 		<script src="rustyTools__test.js"></script>
+		<script src="rustyToolsEvents__test.js"></script>
 		<script src="rustyToolsFn__test.js"></script>
 		<script src="rustyToolsStr__test.js"></script>
 		<script src="rustyToolsTree__test.js"></script>

@@ -1,10 +1,11 @@
-/**********
-Note:   cloneOneLevel will reserence/alias the objects.  This is to prevent infinite recursion,
-				but be carefull of mutating the objects!
+function RustyToolsWrap() {};
 
-				RustyTools.cloneOneLevel can not be in the object notation because it must be called - see below.
-**********/
 RustyTools = {
+	/**********
+	Note:   addOneLevel and cloneOneLevel will referene/alias the objects.
+					This is to prevent infinite recursion,
+					but be carefull of mutating the objects!
+	**********/
 	// addOneLevel - copies object members onto dest.
 	//
 	// Only clones the top level! This prevents infinite loops, but lower level
@@ -45,6 +46,12 @@ RustyTools = {
 			}
 		}
 		return dest;
+	},
+
+	createDomElement: function(templateObj, opt_document) {
+		var element = (opt_document || document).createElement(templateObj.tag);
+		RustyTools.addOneLevel(element, templateObj);
+		return element;
 	},
 
 	cloneOneLevel: function(/* objects */) {
@@ -145,9 +152,15 @@ RustyTools = {
 	 */
 	wrapObject: function(obj) {
 		"use strict";
-		function InheritWrapper() {};
-		InheritWrapper.prototype = obj;
-		return new InheritWrapper();
+		function RustyToolsWrap() {
+			// obj instanceof RustyToolsWrap is unreliable because each
+			// call of wrapObject changes RustyToolsWrap.  Instead put
+			// a test function in the new wrapper.
+			this.rustyToolsIsWrapped = function() {return true;}
+		};
+		RustyToolsWrap.prototype = obj;
+
+		return new RustyToolsWrap();
 	},
 
 	isEnabled: function(xpathOrCSSQuery) {
@@ -184,7 +197,7 @@ RustyTools = {
 	isArrayLike: function(object) {
 		"use strict";
 		try {
-		return 'string' !== typeof object && 'number' === typeof object.length;
+			return 'string' !== typeof object && 'number' === typeof object.length;
 		} catch (e) {
 			// If there it no object.length then it is not not array like.
 			return false;
@@ -199,17 +212,17 @@ RustyTools = {
 		return  RustyTools.cfg.rustyScriptPath + fileName + '.js';
 	},
 
-	// Convert the name (e.g. "RustyTools.Str") to the object it references.
-	// This returns undefined if the object was not found.
-	strToObj: function(rustyToolsObjName) {
+	// Convert the name (e.g. "RustyTools.Str") to the object->member it references.
+	// This returns undefined if the pats is not found.
+	pathToMember: function(rustyToolsObjName, opt_root) {
 		"use strict";
 		var keys = rustyToolsObjName.split('.');
-		var obj = self;
-		for (var j=0; obj && j<keys.length; j++) {
-			obj = obj[keys[j]];
+		var member = opt_root || self;
+		for (var j=0; member && j<keys.length; j++) {
+			member = member[keys[j]];
 		}
 
-		return obj;
+		return member;
 	},
 
 	// Load any other one of the RustyTools...  Pass in the full object name
@@ -222,7 +235,7 @@ RustyTools = {
 		"use strict";
 		var needsToLoad = false;
 		for (var i=0; i<arguments.length; i++) {
-			var obj = RustyTools.strToObj(arguments[i]);
+			var obj = RustyTools.pathToMember(arguments[i]);
 
 			if (!obj && self.document) {
 				var script = self.document.createElement('script');
@@ -269,7 +282,7 @@ RustyTools = {
 		if (loading) {
 			RustyTools.waitForCondition(function() {
 				// Return true if the rustyToolsObjName object eists.
-				return !!RustyTools.strToObj(rustyToolsObjName);
+				return !!RustyTools.pathToMember(rustyToolsObjName);
 			}, fnCallback, opt_interval);
 		}
 		// else RustyTools.load returns flas means already loaded.

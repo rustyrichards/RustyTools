@@ -80,7 +80,7 @@ RustyTools.Str.__test = function(t, r) {
 		function(t, r) {
 			var source = '<div><#inner/></div>';
 			var subst = {inner: '<div class="inner">inner text</div>'};
-			var replaced1 = RustyTools.Str.multiReplace(source, subst, true);
+			var replaced1 = RustyTools.Str.multiReplace(source, subst, 'none');
 			var replaced2 = RustyTools.Str.multiReplace(source, subst);
 			// We have already checked the RustyTools.Str.Entitize
 			r.same(replaced1, '<div><div class="inner">inner text</div></div>').

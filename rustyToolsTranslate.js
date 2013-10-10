@@ -9,108 +9,224 @@
  * @param   punctuationAndOperators - an array strings of the operators and punctuation.
  * @param   assignment - an array of assignment strings.
  * @param   grouping - an array strings of group open and close.  (The depth
- *					of opening will be tracked.)
+ *          of opening will be tracked.)
+ * @param   commentMatch - an array of description followed by SymbolToken,
+ *          NumberToken, LiteralToken or RegExpToken.
  * @param   tokenMatch - an array of description followed by SymbolToken,
- *					NumberToken, LiteralToken or RegExpToken.
+ *          NumberToken, LiteralToken or RegExpToken.
+ *
+ * NOTE:    commentMatch and tokenMatch are the same kinds of arrays.
+ *          The big difference it that the comment token types are recorded in
+ *          spacingTokenTypes.  "checkNextToken" will skip the comments,
+ *          whitespae, and line ends.
  */
-RustyTools.Translate = function(punctuationAndOperators, assignment, grouping,
-		tokens) {
+RustyTools.Translate = function(punctuationAndOperators, unaryOperatotrs,
+	binaryOperators, assignment, grouping,
+		commentMatch, tokenMatch) {
 	"use strict";
-	// Convert the punctuationAndOperators into a regexp to crack the input
-	// string into punctuation tokens.
-	var punct = punctuationAndOperators.sort(RustyTools.Translate.reverseAsciibetical).join('\n');
-	// Escape the punctuation that is used by regexp, then convert the \n to the regexp or
-	punct = RustyTools.Str.regExpEscape(punct).replace(/\n/g, '|');
+
+	// NOTE: 0 = invalid
+	// this.tokenTypes pairs of name, testable (boolean)
+	this.tokenTypes = ['invalid', true];
+
+	if (!punctuationAndOperators) punctuationAndOperators = [];
+	if (!Array.isArray(punctuationAndOperators)) {
+		throw new TypeError('RustyTools.Translate "punctuationAndOperators" was not an array');
+	}
 
 	this.grouping = grouping || [];
-	var groups = ''
-	if (!Array.isArray(grouping)) {
+	if (!Array.isArray(this.grouping)) {
 		throw new TypeError('RustyTools.Translate "grouping" was not an array');
-	}
-	if (this.grouping.length) {
-		groups = RustyTools.Str.regExpEscape(this.grouping.join('\n')).
-				replace(/\n/g, '|');
 	}
 
 	if (!assignment) assignment = [];
-	var assignmentTokens = '';
 	if (!Array.isArray(assignment)) {
 		throw new TypeError('RustyTools.Translate "assignment" was not an array');
 	}
-	if (assignment.length) {
-		assignmentTokens = RustyTools.Str.regExpEscape(assignment.join('\n')).
-				replace(/\n/g, '|');
-	}
 
-	// NOTE: 0 = invalid
-	this.tokenTypes = ['invalid'];
+	// All the punctuation must be sorted together.  (We can't take the
+	// + before +=, but we also can't take = before === or ==) So these must
+	// all be parsed out with the same regex, and then separated.
+	//
+	// Convert the punctuationAndOperators into a regexp to crack the input
+	// string into punctuation tokenMatch.
+	var punct = punctuationAndOperators.concat(unaryOperatotrs,
+			binaryOperators, assignment, this.grouping).
+			sort(RustyTools.Translate.tokenOrder).join('\n');
+	// Escape the punctuation that is used by regexp, then convert the \n to the regexp or
+	punct = RustyTools.Str.regExpEscape(punct).replace(/\n/g, '|');
+
 	var regexStr = '';
 
-	for (var i=0; i<tokens.length; i++) {
-		this.tokenTypes.push(tokens[i++]);
+	for (var i=0; i<commentMatch.length; i++) {
+		// Don't test comments in "checkNextToken";
+		this.tokenTypes.push(commentMatch[i++], false);
 		if (regexStr.length) regexStr += '|';
-		regexStr += tokens[i].toRegExpStr();
+		regexStr += commentMatch[i].toRegExpStr();
+	}
+	for (i=0; i<tokenMatch.length; i++) {
+		this.tokenTypes.push(tokenMatch[i++], true);
+		if (regexStr.length) regexStr += '|';
+		regexStr += tokenMatch[i].toRegExpStr();
 	}
 
-	this.tokenTypes.push('lineBreak', 'whitespace');
-	regexStr += '|(\\r\\n|\\n)|([ \\f\\n\\r\\t\\v\\u00A0\\u2028\\u2029])';
+	this.lineBreakIndex = this.tokenTypes.length >>> 1;
+	this.whitespaceIndex = this.lineBreakIndex + 1;
+	// Don't test whitespace in "checkNextToken";
+	this.tokenTypes.push('lineBreak', false, 'whitespace', false);
+	regexStr += '|(\\r\\n|\\n)|([ \\f\\t\\v\\u00A0\\u2028\\u2029]+)';
 
-	this.tokenTypes.push('punctuation');
+
+	this.punctuationIndex = this.tokenTypes.length >>> 1;
+	this.tokenTypes.push('punctuation', true);
 	regexStr += '|(' + punct + ')';
 
-	if (assignmentTokens) {
-		this.tokenTypes.push('assignment');
-		regexStr += '|(' + assignmentTokens + ')';
-	}
-
-	if (this.grouping.length) {
-		this.tokenTypes.push('grouping');
-		regexStr += '|(' + groups + ')';
-	}
-
+	this.tokenTypes.push('', false);	// Invalid
 	// Lastly match anything else - this match is invalid!
 	regexStr += '|([\\s\\S])';
 
+	// Put the assignment and groupig after the end of real matches
+	this.tokenTypes.push('uniary', true);
+	this.tokenTypes.push('binary', true);
+	this.tokenTypes.push('assignment', true);
+	this.tokenTypes.push('grouping', true);
+
+	// Make the converter from general punction to its types
+	this.punctToIndex = {};	// Punctuation to its type  index
+	var context = this;
+	var toIndex = function(index, punct) {
+		context.punctToIndex[punct] = index;
+		return index;
+	};
+	punctuationAndOperators.reduce(toIndex, this.punctuationIndex);
+	unaryOperatotrs.reduce(toIndex, this.punctuationIndex+2);
+	binaryOperators.reduce(toIndex, this.punctuationIndex+3);
+	assignment.reduce(toIndex, this.punctuationIndex+4);
+	grouping.reduce(toIndex, this.punctuationIndex+5);
 
 	this.tokenizer = new RegExp(regexStr, 'g');
 	try {
 		this.tokenizer.compile(regexStr, 'g');
-	} catch (e) {}	// It is OK if compile does not work, the regex just runs slower.
+	} catch (e) {}  // It is OK if compile does not work, the regex just runs slower.
 };
 
- // NOTE: indixes - 0 = invalid, 1 = lineBreak, 2 = whitespace
- RustyTools.Translate.TokenTypes = [
-	"invalid",
-	"lineBreak",
-	"whitespace"
-];
+RustyTools.Translate.prototype.tokenTypeName_ = function(index) {
+	"use strict";
+	var type = (this.tokenTypes.length > (index<<1)) ? (index<<1) : 0;
+	return this.tokenTypes[type];
+};
 
-RustyTools.Translate.Token = function(tokenType, tokenStr, line, position) {
+RustyTools.Translate.prototype.tokenIndex_ = function(typeName) {
+	"use strict";
+	return this.tokenTypes.indexOf(typeName);
+};
+
+RustyTools.Translate.prototype.tokenTypeIsTestable_ = function(index) {
+	"use strict";
+	var type = (this.tokenTypes.length > (index<<1)) ? (index<<1) : 0;
+	return this.tokenTypes[++type];
+};
+
+RustyTools.Translate.Token = function(tokenType, typeNum, tokenStr, line,
+		position, isTestable) {
 	"use strict";
 	this.type = tokenType;
+	this.typeNum = typeNum;
 	this.str = tokenStr;
 	this.line = line;
 	this.position = position;
-
-	this.error = false;
+	this.isTestable = isTestable;
 };
 
-RustyTools.Translate.Token.prototype.setError = function(opt_typeChange) {
+// So all the instances do not need to carry  default values
+RustyTools.Translate.Token.prototype.error = false;
+RustyTools.Translate.Token.prototype.unrecoverable = false;
+RustyTools.Translate.Token.prototype.subType = '';
+RustyTools.Translate.Token.prototype.errorMessage = '';
+// The symbol table is added to the token at the start amd at each block.
+RustyTools.Translate.Token.prototype.symbolTable = '';
+
+RustyTools.Translate.Token.prototype.setError = function(opt_errorMessage) {
 	"use strict";
 	// Error overrides subtype.
-	if (opt_typeChange) this.type = opt_typeChange;
+	if (opt_errorMessage) {
+		this.errorMessage = opt_errorMessage + '  line: ' + this.line +
+				'  position: ' + this.position;
+	}
 	this.error = true;
 };
 
-RustyTools.Translate.Token.prototype.getSubType = function() {
+RustyTools.Translate.Token.prototype.clearError = function() {
 	"use strict";
-	// Error overrides subtype.
-	if (this.error) return this.type;
+	this.errorMessage = '';
+	this.error = false;
+};
+
+RustyTools.Translate.Token.prototype.getCombinedType = function() {
+	"use strict";
+
+	var result = this.type;
+	if (this.subType) result += ' ' + this.subType;
+	if (this.error) result += ' error';
+	return result;
+};
+
+RustyTools.Translate.Token.prototype.getSubTypeOrType = function() {
+	"use strict";
+
 	return this.subType || this.type;
 };
 
-RustyTools.Translate.reverseAsciibetical  = function(a, b) {
+RustyTools.Translate.Token.prototype.isSame = function(other) {
 	"use strict";
+	return this.type === other.type && this.str === other.str;
+};
+
+// noReparse - Can this change without any need to re-parse?
+RustyTools.Translate.Token.prototype.noReparse = function(other) {
+	"use strict";
+	return false === this.isTestable && false === other.isTestable;
+};
+
+RustyTools.Translate.Token.prototype.replace = function(other) {
+	"use strict";
+	if (!this.noReparse(other)) {
+		for (var i in other) {
+			var val = other[i];
+			// If it is different and not a function, and not index copy it over.
+			if ('function' !== typeof val && 'index' !== i && this[i] !== val) this[i] = val;
+		}
+	} else {
+		// Only copy str and types.  All the others cause re-parsing.
+		this.str = other.str;
+		this.type = other.type;
+		this.typeNum = other.typeNum;
+	}
+};
+
+RustyTools.Translate.Token.prototype.possibleValue = function(opt_allowStrings) {
+	return (-1 != ['symbol', 'number'].indexOf(this.type) ||
+			(opt_allowStrings && 'string' === this.type)) || ')' === this.str ||
+			']' === this.str;
+},
+
+RustyTools.Translate.Token.prototype.needTwoValues = function(afterToken, opt_allowStrings) {
+	return this.possibleValue(opt_allowStrings) && afterToken &&
+			afterToken.possibleValue(opt_allowStrings);
+};
+
+RustyTools.Translate.Token.prototype.needOneValue = function(afterToken, opt_allowStrings) {
+	return this.possibleValue(opt_allowStrings) || (afterToken &&
+			afterToken.possibleValue(opt_allowStrings));
+};
+
+
+RustyTools.Translate.tokenOrder  = function(a, b) {
+	"use strict";
+	// longest first
+	if (b.length < a.length) return -1;
+	if (a.length < b.length) return 1;
+	// reverseAsciibetical
 	return (b < a) ? -1 : ((a < b) ? 1 : 0);
 };
 
@@ -122,20 +238,28 @@ RustyTools.Translate.reverseAsciibetical  = function(a, b) {
  */
 RustyTools.Translate.prototype.extractTokens = function(input) {
 	"use strict";
-	var output = [];
-	var result;
-	var line = 1;
-	var pos = 1;
-	while((result = this.tokenizer.exec(input)) !== null) {
+	var output = [], result, line = 1, pos = 1;
+	while((result = this.tokenizer.exec(input)) != null) {
 		for (var i=1; i<result.length; i++) {
-			if (result[i]) {
+			var tokenStr = result[i];
+			if (tokenStr) {
 				// 0 = invalid is a tokenizer error.
-				var type = (this.tokenTypes.length > i) ? i : 0;
-				output.push(type);
-				output.push(new RustyTools.Translate.Token(this.type(type),
-						result[i], line, pos));
-				if (1 === type) {
-					// lineBreak
+				var typeNum = (this.tokenTypes.length > (i<<1)) ? i : 0;
+				if (typeNum === this.punctuationIndex) {
+					typeNum = this.punctToIndex[tokenStr];
+				}
+				var tokenName = this.tokenTypeName_(typeNum);
+				if (!tokenName) { // No token name is also invalid
+					typeNum = 0;
+					tokenName = this.tokenTypes[0];
+				}
+
+				var token = new RustyTools.Translate.Token(
+						tokenName, typeNum, tokenStr, line, pos,
+						this.tokenTypeIsTestable_(i));
+				if (!typeNum) token.setError('Unknown token: "' + token.str + '"');
+				output.push(token);
+				if (this.lineBreakIndex === typeNum) {
 					line++;
 					pos = 1;
 				} else {
@@ -148,36 +272,419 @@ RustyTools.Translate.prototype.extractTokens = function(input) {
 	return output;
 };
 
-RustyTools.Translate.prototype.showError = function(message, index, tokens) {
+/**
+ * getNextToken is for lookahead durring parsing.
+ * (e.g. is the next non-space token an assignment, it a ':')
+ */
+RustyTools.Translate.prototype.getNextToken = function(tokens, index) {
 	"use strict";
-	RustyTools.log(message);
-	RustyTools.log("Line: " + tokens[index].line + "  position: " +
-			tokens[index].position);
+	// NOTE: no next token will return null.
+	while (++index < tokens.length) {
+		if (tokens[index].isTestable) return tokens[index];
+	}
+
+	return null;
+};
+
+/**********
+ Several of the state objects take token string  - id lists.  These are
+ simply arrays that consist of:
+ 	token_string, id_string[, token_string, id_string[...]]
+ Because of the token string  - id pairs, the  id must not match
+ a valid token string in the same token string  - id pair list!
+
+A state object has the following (all optional) values:
+	id:				  The the id of the given state.  The StateSet can look up by id.
+	needs:			The token.str list.  The token must match one of these.
+	pushIf:			A token string  - id list.  If the token str is matched, push to
+							the state with the given id.
+	pushOnAssign:	An assignment will push to the given state.  (Could be done
+							with a pushIf, but often all assignments go to the same state.)
+	restartIf:	A token.str list.  If one of the strs is matched - jump to the
+							start of the state set.
+	popIf:			A token.str list.  If one of the strs is matched - pop the state.
+	jumpIf:			A token string  - id list.  If the token str is matched, push to
+							the state with the given id.
+	push:				(Tested after pushIf) Push to a new state - for things like the
+							for statement which have a controlled number of statements.
+	pop: true		(Tested after popIf) Pop after handling this state.
+	jump: true	(Tested after jumpIf) jump after handling this state.
+	scopeSymbols:	true - wrap the symbol table to enter a scope
+								false - unwrap the symbol table to exit the scope
+								NOTE: must match the pushIf/push, or popIf/pop.
+**********/
+RustyTools.Translate.ganeralStatement = 1;
+RustyTools.Translate.varDef = 2;								// an rvalue that may be a new symbol
+RustyTools.Translate.hasVar = 3;
+RustyTools.Translate.needsRValue = 4;
+RustyTools.Translate.hasRValue = 5;
+RustyTools.Translate.needsJsonName = 6;
+
+/**
+ * In a statefull language the language parser should own a StateSet
+ * to handle all the possible states
+ */
+RustyTools.Translate.StateSet = function(states) {
+	"use strict";
+	this.states = states;
+	// State must begin and end with null to make the backupToStart_ and
+	// endsBlock work easily.
+	if (this.states[0]) this.states.unshift(null);
+	if (this.states[this.states.length-1]) this.states.push(null);
+
+	this.idToIndex = {};	// A hash of name to state index
+
+	var context = this;
+	this.states.forEach(function(element, index) {
+		if (element && element.id) context.idToIndex[element.id] = index;
+	});
+};
+
+RustyTools.Translate.StateSet.prototype.fromIndex = function(index) {
+	return this.states[index];
+};
+
+RustyTools.Translate.StateSet.prototype.indexFomId = function(id) {
+	return this.idToIndex[id] || 0;
 };
 
 /**
- * Interface for "converted"
- *  unrecoverable:  boolean - optional  Set .unrecoverable true if the
- *			Translate must exit.
- *  output:  any (usualy a string or a token) - optional  If .output is set it
- *			will concatinate to the array or output.
- *	lanuguageTree:  a language tree (obeject) - optional.  If lanuguageTree is
- *			set will push on the new language tree state.
- *	stack:  - optional  IT stack is falsy this will pop the lanugageTree stack.
- *			If it has an object, the object will be pushed as the new language tree.
+ * stateManager handles transitions through the a state sequence.  Each push
+ * of a parser in a statefull language should make a new StateManager.
  */
-RustyTools.Translate.prototype.translate_ = function(tokens, languageTree,
-		symbolTable, context, opt_fileName) {
+RustyTools.Translate.StateManager = function(stateSet, initialStateName,
+		opt_StateEndBlock, opt_endBlockCount) {
 	"use strict";
-	var languageStack = [];
-	var symbolStack = [];
-	var output = [];
-	var index = 0;
+	this.stateSet = stateSet;
+
+	this.groupingCounts = [];
+
+	// stateManager remains unchanges, but this.current statcks and unstacks
+	// down its prototype chain.  This way we don't need to handle passng the
+	// stateManager out of the token handlers.
+	this.current = {state: null, stateIndex: 0,
+			endBlock: opt_StateEndBlock || '',
+			endCount: (opt_endBlockCount == null) ? 1000000 : opt_endBlockCount}
+
+	this.current.endBlock = opt_StateEndBlock || '';
+	// One million - should not ba able to stack blocks that deep
+	this.current.endCount = (opt_endBlockCount == null) ? 1000000 : opt_endBlockCount;
+
+	this.jump(initialStateName);
+};
+
+/**
+ * jump - jump to a given state.
+ */
+RustyTools.Translate.StateManager.prototype.jump = function(stateName) {
+	"use strict";
+	this.current.stateIndex = this.stateSet.indexFomId(stateName);
+	this.current.state = this.stateSet.fromIndex(this.current.stateIndex);
+
+	// For chaining.
+	return this;
+};
+
+RustyTools.Translate.StateManager.prototype.push = function(stateName, token) {
+	"use strict";
+	this.current = RustyTools.wrapObject(this.current);
+	this.jump(stateName);
+
+	if (token.type === 'grouping' && token.closer) {
+		this.current.endBlock = token.closer;
+		this.current.endCount = token.groupingCount;
+	} else {
+		this.current.endBlock = '';
+		this.current.endCount = 1000000;
+	}
+
+	// For chaining.
+	return this;
+};
+
+RustyTools.Translate.StateManager.prototype.advance = function() {
+	"use strict";
+	this.current.state = this.stateSet.states[++this.current.stateIndex];
+
+	// For chaining.
+	return this;
+};
+
+RustyTools.Translate.StateManager.prototype.retreat = function() {
+	"use strict";
+	this.current.state = this.stateSet.states[--this.current.stateIndex];
+
+	// For chaining.
+	return this;
+};
+
+RustyTools.Translate.StateManager.prototype.backupToStart_ = function() {
+	"use strict";
+	// Back up to a null or to before 0.
+	while (this.stateSet.states[--this.current.stateIndex]);
+
+	// Advance one to find the start state. Return true if the state is found.
+	this.current.state = this.stateSet.states[++this.current.stateIndex];
+
+	// For chaining.
+	return this;
+};
+
+RustyTools.Translate.StateManager.prototype.advanceToEnd_ = function() {
+	"use strict";
+	// Back up to a null or to before 0.
+	while (this.stateSet.states[++this.current.stateIndex]);
+
+	this.current.state = this.stateSet.states[this.current.stateIndex];
+
+	// For chaining.
+	return this;
+};
+
+RustyTools.Translate.StateManager.prototype.pop_ = function(token) {
+	"use strict";
+
+	var lastIndex = (this.current) ? (this.current.stateIndex || 1) : 1;
+	// "push" chained the prototype, so "pop" unchains.
+	// Only pop the wrapped prototypes.
+	this.current.state = null;
+	while (!this.current.state && this.current.rustyToolsIsWrapped &&
+			this.current.rustyToolsIsWrapped()) {
+		this.current = Object.getPrototypeOf(this.current);
+
+		// The state may auto-pop
+		if (this.current.state && this.current.state.pop) this.current.state = null;
+	}
+
+	if (!this.current.state) {
+		this.current.stateIndex = lastIndex;
+		this.backupToStart_();
+	}
+
+	// No need to tansition on the new sate.  The advance before push makes
+	// sure that the popped state is for the next token.
+
+	// For chaining
+	return this;
+};
+
+RustyTools.Translate.StateManager.prototype.handleScope = function(token, symbolTable) {
+	"use strict";
+	var outSymbolTable = symbolTable;
+
+	if (this.current && this.current.state && this.current.state.scopeSymbols) {
+		// Enter the scope/push if the pushIf matches an even index, or push
+		if ((this.current.state.pushIf && !(1 & this.current.state.pushIf.indexOf(
+				token.str))) || this.current.state.push) {
+			outSymbolTable = RustyTools.wrapObject(symbolTable);
+		}
+	}
+
+	return outSymbolTable;
+};
+
+/**********
+ idIndex_  For the token string  - id  of:
+ 	token_string, id_string[, token_string, id_string[...]]
+**********/
+RustyTools.Translate.StateManager.prototype.getId_ = function(tokenStrAndIds, tokenStr) {
+	var index = (tokenStrAndIds || []).indexOf(tokenStr);
+
+	// If token str is found on an even index - return  next index (the id of the pair).
+	return (1 & index) ? null /* not found */ : tokenStrAndIds[index + 1];
+};
+
+RustyTools.Translate.StateManager.prototype.transitionOnToken = function(token, symbolTable) {
+	"use strict";
+	var outSymbolTable = symbolTable;
+
+	var endBlockPop = (this.current.endBlock === token.str && this.current.endCount >=
+				(this.current.blockCount || 0)) || !this.current.state;
+
+	var needsMatchIndex = -1;
+
+	// needs does not apply if the this.current.endBlock causes the statement pop.
+	if (this.current.state && !endBlockPop) {
+		// Check if the token fails to match "needs"
+		if (this.current.state.needs) {
+			var index;
+			if (!token.error && token.isTestable) {
+				var needsMatchIndex = this.current.state.needs.indexOf(token.str);
+				if (-1 == needsMatchIndex) {
+					token.setError('The token: "' + token.str + '" was found where "' +
+							this.current.state.needs + '" is required.')
+				}
+			}
+		}
+	}
+
+	if (this.current.state && this.current.state.scopeSymbols === false &&
+			!token.error && outSymbolTable.rustyToolsIsWrapped &&
+			outSymbolTable.rustyToolsIsWrapped()) {
+		// NOTE: pop only on success. The writer of the state table needs to be sure
+		// the state changed!.  (Otherwise this could fail to pop on manual state advance!)
+		outSymbolTable = Object.getPrototypeOf(outSymbolTable);
+	}
+
+	// Note: an empty current.state also pops!
+	if (endBlockPop) {
+			this.pop_(token);
+	} else if (this.current.state) {
+		// State transitions do not apply to errored tokens.
+		var nextStateId;
+		if (!token.error) {
+			if (this.current.state.pushIf && (nextStateId =
+					this.getId_(this.current.state.pushIf, token.str))) {
+				// transitionOnToken does an advance before each push so that the
+				// pop will return to the next statement.  Most manual calling of
+				// of push should return to the same state.  (E.g. unary or binary
+				// Operator takes one or two values and produces a value, a [..]
+				// takes an array value and produces a value.)
+				this.advance();
+				this.push(nextStateId, token);
+			} else if (this.current.state.pushOnAssign && token.type === 'assignment') {
+				// No advacne on the assignment push.  E.g.  hasVar pushes needsLvalue,
+				// then pops to hasVar
+				this.push(this.current.state.pushOnAssign, token);
+			} else if (this.current.state.restartIf && -1 !==
+					this.current.state.restartIf.indexOf(token.str)) {
+				this.backupToStart_();
+			} else if (this.current.state.popIf && -1 !==
+					this.current.state.popIf.indexOf(token.str)) {
+				this.pop_(token);
+			} else if (this.current.state.jumpIf && (nextStateId =
+					this.getId_(this.current.state.jumpIf, token.str))) {
+				this.jump(nextStateId);
+			} else if (this.current.state.push) {
+				this.advance();
+				this.push(this.current.state.push, token);
+			} else if (this.current.state.pop) {
+				this.pop_(token);
+			} else if (this.current.state.jump) {
+				this.jump(this.current.state.jump);
+			} else if (-1 < needsMatchIndex) {
+				this.advance();
+			}
+		}
+	}
+
+	return outSymbolTable;
+};
+
+/**
+ * blocAllowed - Return true if the block opener or closer is allowed.
+ */
+RustyTools.Translate.StateManager.prototype.blockAllowed = function(token) {
+	"use strict";
+	var allowed = false;
+
+  if (this.current.state) {
+		if (token.closer && (!this.current.state.pushIf ||
+				// pushIf - must match an even index.
+				(1 & this.current.state.pushIf.indexOf(token.str)))) {
+			token.setError('The block "' + token.str + '" is not allowed in this context.')
+		} else {
+			allowed = true;
+		}
+	} else {
+		token.setError('The block "' + token.str + '" is not allowed in in the end state.')
+	}
+
+	return allowed;
+};
+
+/**
+ * isOneOf - Return true if any of the names match.
+ */
+RustyTools.Translate.StateManager.prototype.isOneOf = function(/* state strings*/) {
+	"use strict";
+	var matched = false;
+	var index = arguments.length;
+	while(this.current && this.current.state && !matched && index--) {
+		matched = this.current.state.id=== arguments[index];
+	}
+
+	return matched;
+};
+
+/**
+ * foundValue - called for tokens that can be lValues, or rValues.
+ */
+RustyTools.Translate.StateManager.prototype.foundValue = function(token,
+		canBeLValue, canBeRValue, lValueError, rValueError) {
+	"use strict";
+
+	var options = this.getOptions();
+	if (!canBeLValue && options === RustyTools.Translate.varDef) {
+		token.setError(RustyTools.Str.multiReplace(lValueError, token));
+	} else if (!canBeRValue && (options === RustyTools.Translate.needsRValue ||
+			options === RustyTools.Translate.needsJsonName)) {
+		token.setError(RustyTools.Str.multiReplace(rValueError, token));
+	}
+
+	if (!token.error && (options === RustyTools.Translate.varDef ||
+			options === RustyTools.Translate.needsRValue ||
+			options === RustyTools.Translate.needsJsonName)) {
+		this.advance();
+	}
+
+	return !token.error;
+};
+
+/**
+ * getOptions - should not need RustyTools.Translate.restartAllowed it
+ * is handled in resetIfPossible
+ */
+RustyTools.Translate.StateManager.prototype.getOptions = function(/* state strings*/) {
+	"use strict";
+	return (this.current.state) ? this.current.state.options : 0;
+};
+
+/**
+ * getEndStr - for checking the block end string.
+ */
+RustyTools.Translate.StateManager.prototype.getEndStr = function() {
+	"use strict";
+	return (this.state) ? this.state.blockOrEndStr : '';
+};
+
+/**
+ * Set the current state for the later testing.
+ */
+RustyTools.Translate.StateManager.prototype.markState = function() {
+	this.lastIndex = this.current.stateIndex || 0;
+};
+
+/**
+ * isMarkedState - check to see if that managere is still in the marked state.
+ */
+RustyTools.Translate.StateManager.prototype.isMarkedState = function() {
+	return this.lastIndex === this.current.stateIndex;
+};
+
+
+// parse_	Run the parser and build the symbol table.
+//				Note:  parser + stateManager do the actual parsing, this just runs
+//				the tokens and states.
+//
+// NOTE: This does not track the variable bindings.
+RustyTools.Translate.prototype.parse_ = function(tokens, parser,
+		stateManager, symbolTable,  opt_outputHandler, opt_fileName) {
+	"use strict";
+	var languageStack = [], index = 0, nextToken, previousToken, token;
+
+	var context = parser.start(tokens);
+
+	// Put the initial symbol table in the first token.
+	if (tokens.length) tokens[0].symbolTable = RustyTools.wrapObject(symbolTable);
+
 	while (index < tokens.length) {
-		index++;	// Skip the numeric values hera.
-		var token = tokens[index];
+		if (token && token.isTestable) previousToken = token;
+		token = tokens[index];
 		var type = token.type;
 		var str = token.str;
+
+		stateManager.markState();
 
 		// Count the depth on the grouping tokens
 		if ('grouping' === type) {
@@ -188,12 +695,13 @@ RustyTools.Translate.prototype.translate_ = function(tokens, languageTree,
 					groupingIndex >>= 1;
 					// Too many closers will generate a -1 token.groupingCount, but the
 					// this.groupingCounts must pin at 0
-					if (0 > (token.groupingCount = --context.groupingCounts[groupingIndex])) {
-						context.groupingCounts[groupingIndex] = 0;
+					if (0 > (token.groupingCount = --stateManager.groupingCounts[groupingIndex])) {
+						stateManager.groupingCounts[groupingIndex] = 0;
 					}
 				} else {
 					// An opener
-					token.groupingCount = context.groupingCounts[groupingIndex >> 1]++;
+					token.groupingCount = stateManager.groupingCounts[groupingIndex >> 1]++;
+					token.closer = this.grouping[groupingIndex + 1];
 				}
 			}
 		}
@@ -201,94 +709,121 @@ RustyTools.Translate.prototype.translate_ = function(tokens, languageTree,
 		// Put the index into the token to make the object handling simpler.
 		token.index = index;
 
+		// Put the state itno the token for diagnostic purposes.
+		token.state = stateManager.current.state;
+
+		// Usually 2 tokens are sufficient.  If the handler needs more it can
+		// call getNExtToken.
+		var nextToken = this.getNextToken(tokens, index);
+
+		// Adjust the symbol table scope if needed.
+		symbolTable = stateManager.handleScope(token, symbolTable);
+
 		// Call the handler for the diven token type.
 		// In a syntax highlighter, the token type call could color the token,
 		// The later per-token str cal could determine the validity of the token.
-		var converted;
-		try {
-			converted = languageTree[type].call(languageTree, str, token,
-					context, symbolTable, tokens, this);
-		} catch(e) {
-			converted = {};
+
+		var next;
+		// Pass all properties through anyToken if it exists
+		var methodName = '__' + type;
+		if ('function' === typeof parser.anyToken) {
+			try {
+				parser.anyToken(context, str, token, stateManager, symbolTable,
+						previousToken, nextToken, tokens, this);
+			} catch(e) {}
 		}
 
-		// Coud check to see that 'function' == typeof languageTree[str]
+		// If it exists call a handler for the given token type.
+		// Prefix with __ so that we don't accitentally hit other members of parser.
+		methodName = '__' + type;
+		if ('function' === typeof parser[methodName]) {
+			try {
+				parser[methodName](context, str, token, stateManager, symbolTable,
+						previousToken, nextToken, tokens, this);
+			} catch(e) {}
+		}
+
+		// Could check to see that 'function' == typeof parser[str]
 		// but this needs a try ... catch anyway, so skip the extra step.
 		//
 		// If it exists call a handler for the given token string.
-		if (languageTree.hasOwnProperty(str)) {
+		// Prefix with __ so that we don't accitentally hit other members of parser.
+		methodName = '__' + str;
+		if ('function' === typeof parser[methodName]) {
 			try {
-				converted = languageTree[str].call(languageTree, converted,	str, token,
-					context, symbolTable, tokens, this);
+				parser[methodName](context, str, token, stateManager, symbolTable,
+						previousToken, nextToken, tokens, this);
+				// If the return is anything other the undefined or null this overrides
+				// the more general return above.
+				if (symbolNext != null) next = symbolNext;
 			} catch (e) {}
 		}
 
-		// Handle the output in "converted"
-		if (converted.unrecoverable) throw new SyntaxError(
-				'Fatal error at token: "' + tokens[index].str + '"',
+		// Processing the token may have changed the state manually. If it did don't
+		// call the default transitionOnToken.  Alway do transitionOnToken for a
+		// null state!  - Need to pop to a good state.
+		if (!stateManager.current.state || (token.isTestable &&
+				stateManager.isMarkedState())) {
+			symbolTable = stateManager.transitionOnToken(token, symbolTable);
+		}
+
+		if (token.unrecoverable) {
+			throw new SyntaxError(
+				'Fatal error at token: "' + tokens[index].str + '"  line: ' +
+				token.line + '  position: ' + token.position,
 				opt_fileName || "unknown", index);
+		}
 
-		if (converted.output) output.push(converted.output);
-
-		if ('stack' in converted) {
-			if (converted.stack) {
-				languageStack.push(languageTree);
-				languageTree = converted.stack;
-
-				symbolStack.push(symbolTable);
-				symbolTable = RustyTools.cloneOneLevel(symbolTable);
-			} else {
-				if (languageStack.length) languageTree = languageStack.pop();
-				if (symbolStack.length) symbolTable = symbolStack.pop();
+		// If next is not null or undefined it is either a language tree push or pop.
+		if (next && 'object' === typeof next) {
+			if (next.parser) {
+				languageStack.push(parser);
+				parser = next.parser;
+			} else if (next.popNode) {
+				if (languageStack.length) parser = languageStack.pop();
 			}
 		}
 
-		if (converted.lanuguageTree) languageTree = converted.lanuguageTree;
 		index++;
 	}
 
-	return output;
+	return parser.end(context);
 };
 
 /**
- * translateTokens lower level than translate.  Sometimes
+ * parseTokens 	is lower level than parse. Use this when you want to keep the
+ *							token array.
+ * Note:  			parser + stateManager do the actual parsing, this just
+ *							runs the tokens and states.
+ *
+ * NOTE: This does not track the variable bindings.
  */
-RustyTools.Translate.prototype.translateTokens = function(tokens, languageTree,
-		symbolTable, opt_contextObject, opt_fileName) {
+RustyTools.Translate.prototype.parseTokens = function(tokens, parser,
+		stateManager, symbolTable, opt_fileName) {
 	"use strict";
-	if (!opt_contextObject) opt_contextObject = {};
-
 	// Build the this.groupingCounts array
 	var len = this.grouping.length >> 1;
-	opt_contextObject.groupingCounts = new Array(len);
-	while (len--) opt_contextObject.groupingCounts[len] = 0;
+	stateManager.groupingCounts = new Array(len);
+	while (len--) stateManager.groupingCounts[len] = 0;
 
-	return this.translate_(tokens, languageTree, symbolTable,
-			opt_contextObject, opt_fileName);
+	return this.parse_(tokens, parser, stateManager, symbolTable,
+			opt_fileName);
 };
 
 /**
- * translate takes in the source sting, tokenizes it, and then
- * uses translate_ to produce the output
+ * parser is lower level than parse. Use parseTokens when you want to keep the
+ *				source tokens
+ * Note:  parser + stateManager do the actual parsing, this just runs the
+ *				tokens and states.
+ *
+ * NOTE: This does not track the variable bindings.
  */
-RustyTools.Translate.prototype.translate = function(src, languageTree,
-		symbolTable, opt_contextObject, opt_fileName) {
+RustyTools.Translate.prototype.parse = function(src, parser,
+		stateManager, symbolTable, opt_fileName) {
 	"use strict";
 	var tokens = this.extractTokens(src);
-	return this.translateTokens(tokens, languageTree, symbolTable,
-			opt_contextObject, opt_fileName);
-};
-
-/**
- * type - Convert the token numeric type to its string.  0 is always the
- *             error 'invalid'
- *
- * @return  string
- */
-RustyTools.Translate.prototype.type = function(typeIndex) {
-	"use strict";
-	if (0 > typeIndex || this.tokenTypes.length <= typeIndex) typeIndex = 0;
-	return this.tokenTypes[typeIndex];
+	return this.parseTokens(tokens, parser, stateManager, symbolTable,
+			opt_fileName);
 };
 
 RustyTools.Translate.NumberToken = function(numberInfo) {
@@ -389,50 +924,4 @@ RustyTools.Translate.RegExpToken.prototype.toRegExpStr = function() {
 	return this.regExStr;
 };
 
-RustyTools.StateStack = function(statesOrStateObject, startingState) {
-	this.states = ('function' === typeof statesOrStateObject) ?
-			statesOrStateObject : RustyTools.constantWrapper(statesOrStateObject);
-	this.startingState = startingState;
-
-	this.stack = [this.states(this.startingState)];
-};
-
-/*
- * StateStack.prototype all operations are on the top/last of the stack
- */
-RustyTools.StateStack.prototype.get = function() {
-	return (this.stack.length) ? this.stack[this.stack.length - 1] : 0;
-};
-
-RustyTools.StateStack.prototype.set = function(key) {
-	var value = this.states(key);
-	if (!this.stack.length) this.stack.push(value);
-	this.stack[this.stack.length - 1] = value;
-};
-
-RustyTools.StateStack.prototype.is = function(key) {
-	return (this.stack[this.stack.length - 1] === this.states(key));
-};
-
-RustyTools.StateStack.prototype.push = function(opt_key) {
-	return this.stack.push(this.states(opt_key || this.startingState));
-};
-
-RustyTools.StateStack.prototype.pop = function() {
-	return this.stack.pop();
-};
-
-RustyTools.StateStack.prototype.progressState = function(matchedState,
-		unmatchedState /*, test states */) {
-	var currentState = this.stack[this.stack.length - 1];
-	var found = false;
-	for (var i=1; !found && i<arguments.length; i++) {
-		found = currentState === this.states(arguments[i]);
-
-	}
-	var nextState = this.states((found) ? matchedState : unmatchedState);
-	if (nextState) this.stack[this.stack.length - 1] = nextState;
-
-	return found;
-};
 

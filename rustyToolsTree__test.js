@@ -77,7 +77,7 @@ RustyTools.Tree.__test = function(t, r) {
 					logObjects(forJson);
 				} else {
 					// Need a web page to run this test.
-					r.not(!self.document);
+					r.is(self.document);
 				}
 		},
 	]);

@@ -46,6 +46,12 @@ RustyTools.__test = function(t, r) {
 					'This exception was generated for testing.');
 		},
 
+		'RustyTools.createDomElement',
+		function(t, r) {
+			var div = RustyToolsTest.createDomElement({tag:'DIV', className: 'test', innerHTML:'one line'});
+			r.is(div).same('one line', div.innerHTML);
+		},
+
 		'RustyTools.configure && RustyTools.cloneOneLevel (configure calls cloneOneLevel)',
 		function(t, r) {
 			RustyToolsTest.configure({xTest: "string",
@@ -134,8 +140,8 @@ RustyTools.__test = function(t, r) {
 			r.not(RustyTools.isArrayLike(1.1)).					// number is not array like
 				not(RustyTools.isArrayLike('test')).			// string explicitly excluded
 				not(RustyTools.isArrayLike({length: 'foo'})).	// property length is not a number
-				not(!RustyTools.isArrayLike(arguments)).		// arguments is array like
-				not(!RustyTools.isArrayLike([]));				// empty array is array like
+				is(RustyTools.isArrayLike(arguments)).		// arguments is array like
+				is(RustyTools.isArrayLike([]));				// empty array is array like
 		},
 
 		'RustyTools.getUri',
@@ -151,7 +157,7 @@ RustyTools.__test = function(t, r) {
 				r.same(scriptSrc, uri);
 			} else {
 				// No window.document, can't run this test!
-				r.not(!self.document);
+				r.is(self.document);
 			}
 		},
 
@@ -171,24 +177,39 @@ RustyTools.__test = function(t, r) {
 				});
 
 			// Loading should be true.
-			r.not(!loading);
+			r.is(loading);
+		},
+
+		'RustyTools.pathToMember',
+		function(t, r) {
+			// Array.prototype.slice better exist!
+			var slice = RustyTools.pathToMember("Array.prototype.slice");
+
+			// RustyTools.pathToMember
+			var pathToMember = RustyTools.pathToMember("pathToMember", RustyTools);
+
+			// RustyTools.xxx does not exist
+			var xxx = RustyTools.pathToMember("RustyTools.xxx");
+
+			r.same('function', typeof slice).same('function', typeof pathToMember).
+					not(xxx);
 		},
 
 		'RustyTools.isEnabled',
 		function(t, r) {
 			// Checking the id=report should always work
-			r.not(!RustyTools.isEnabled('#report'));
+			r.is(RustyTools.isEnabled('#report'));
 		},
 		function(t, r) {
 			// This will fail in I.E.  I.E. does not have the xpath "evaluate"
 
-			// Xpath to the first div.  
-			r.not(!RustyTools.isEnabled('//div'));
+			// Xpath to the first div.
+			r.is(RustyTools.isEnabled('//div'));
 		},
 		function(t, r) {
 			// NOTE:  This will fail if jquery, or some other $ implementatuion is not loaded.
 			// search by class.
-			r.not(!RustyTools.isEnabled('.report-style'));
+			r.is(RustyTools.isEnabled('.report-style'));
 		}
 	]);
 };

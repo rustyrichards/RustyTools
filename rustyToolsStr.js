@@ -315,20 +315,21 @@ RustyTools.Str = {
 	 *                Note: the '-' is usually note needed.  Because the content is supstituted
 	 *                before the non-content tags are supstituted!
 	 *
-	 *								You useually want to entitize the substituted strings so they
+	 *								You usually want to entitize the substituted strings so they
 	 *								will display correctly in HTML.  If you don't want this set
-	 *									opt_skipEncoding = true
-	 *                You usually want the numbers in substObjs to keep increasing.  (This is usefull
-	 *                for generating unique IDs)
-	 *                If you need the numbers to start the same each time use
-	 *                  opt_doNotChangeSubst = true
+	 *									opt_encoding = 'none'
+	 *								To preserve white space use:
+	 *									opt_encoding = 'pre'
 	 */
-	multiReplace: function(str, substObjs, opt_skipEncoding, opt_doNotChangeSubst) {
+	multiReplace: function(str, substObjs, opt_encoding, opt_doNotChangeSubst) {
 		"use strict";
 		var matches = {};
 		var result = str;
 		var i;
 		var j;
+
+		var keepWhitespace = 'pre' === opt_encoding;
+		var encode = 'none' !== opt_encoding;
 
 		if (!Array.isArray(substObjs)) substObjs = [substObjs];
 		for (i=0; i<substObjs.length; i++) {
@@ -367,8 +368,8 @@ RustyTools.Str = {
 								}
 							} else if (!matches[key]) {
 								matches[key] = RustyTools.Str.toString(substValue);
-								if (!opt_skipEncoding) matches[key] = RustyTools.Str.entitize(
-										matches[key]);
+								if (encode) matches[key] = RustyTools.Str.entitize(
+										matches[key], keepWhitespace);
 							}
 						}
 						return (matches[key] == null) ? match : matches[key];
@@ -389,7 +390,8 @@ RustyTools.Str = {
 							if ('function' === typeof val) val = substObj[key].call(substObj);
 							retVal =  RustyTools.Str.toString(val);
 						}
-						if (!opt_skipEncoding) retVal = RustyTools.Str.entitize(retVal);
+						if (encode) retVal = RustyTools.Str.entitize(retVal,
+								keepWhitespace);
 					}
 					return retVal;
 				});

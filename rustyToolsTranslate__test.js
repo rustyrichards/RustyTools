@@ -1,6 +1,179 @@
 // The testers have a lot of tiny functons - use the whole script "use strict".
 "use strict";
 
+RustyTools.Translate.Token.__test = function(t, r) {
+	// Decimal constructor
+	var testableToken;
+	var untestableToken;
+	t.test([
+			"RustyTools.Translate.Token.__test\n" +
+			"Translate.",
+			function(t, r) {
+				untestableToken = new RustyTools.Translate.Token("strange-comment", 99,
+						"--special--",  1/* line */, 10 /* position */, false /* not testable */);
+				testableToken = new RustyTools.Translate.Token("symbol", 99,
+						"+",  1/* line */, 10 /* position */, true /* testable */);
+				r.different(untestableToken.type, testableToken.type).
+						same(untestableToken.typeNum, testableToken.typeNum).
+						different(untestableToken.str, testableToken.str);
+			},
+			function(t, r) {
+				// Untestable tokens are for whitespace comments.
+				r.not(untestableToken.isTestable).different(untestableToken.isTestable,
+						testableToken.isTestable);
+			},
+			function(t, r) {
+				// Setting and clearing errors.
+				r.not(testableToken.error);
+				testableToken.setError("Fake error.");
+				r.is(testableToken.error).different(untestableToken.error,
+						testableToken.error);
+				testableToken.clearError();
+				r.not(testableToken.error).not(testableToken.errorMessage);
+			},
+			function(t, r) {
+				// get...Type
+				testableToken.subType = "addition";
+
+				r.same('symbol addition', testableToken.getCombinedType()).
+						same('addition', testableToken.getSubTypeOrType()).
+						same('strange-comment', untestableToken.getCombinedType()).
+						same('strange-comment', untestableToken.getSubTypeOrType());
+			},
+			function(t, r) {
+				// isSame only the .type and .str matter to isSame.
+				// (Note .error is not counted.)
+				var newToken = new RustyTools.Translate.Token("symbol", 101,
+						"+",  10/* line */, 100 /* position */, false /* not-testable */);
+
+				// Same as testableToken different from untestableToken
+				r.is(newToken.isSame(testableToken)).not(newToken.isSame(untestableToken));
+			},
+			function(t, r) {
+				// noReparse and replace.
+				var whiteToken = new RustyTools.Translate.Token("whitespace", 101,
+						" ",  10/* line */, 100 /* position */, false /* not-testable */);
+				var whiteToken2 = new RustyTools.Translate.Token("comment", 111,
+						"/* test */",  11/* line */, 121 /* position */, false /* not-testable */);
+
+				// whiteToken to whiteToken2 - no need to re-parse.
+				// Replace whiteToken with whiteToken2, whiteToken's line does not change
+				r.is(whiteToken.noReparse(whiteToken2));
+				whiteToken.replace(whiteToken2);
+				r.different('whitespace', whiteToken.type).same(10, whiteToken.line);
+
+				// whiteToken to testableToken - need to replace
+				r.not(whiteToken.noReparse(testableToken));
+				whiteToken.replace(testableToken);
+				r.different('whitespace', whiteToken.type).different(10, whiteToken.line);
+			}
+	]);
+};
+
+RustyTools.Translate.StateSet.__test = function(t, r) {
+	var jsonSet;
+	t.test([
+			"RustyTools.Translate.StateSet.__test",
+			function(t, r) {
+				// NOTE: A real json parser would need to handl [...] too, but
+				// that would need more states, then we need for this test.
+				jsonSet = new RustyTools.Translate.StateSet([
+					{id: 'jsonName', options:RustyTools.Translate.needsJsonName},
+					{id: 'jsonSep', needs: [':']},
+					{id: 'jsonStatement', pushIf: ['{', 'jsonName'],
+							options: RustyTools.Translate.ganeralStatement, scopeSymbols:true},
+					{restartIf: [','], needs: [',', '}'], scopeSymbols:false}
+				]);
+
+				// Make sure the null(s) are pushed to the begin and end.
+				r.same(null, jsonSet.states[0]).same(null,
+						jsonSet.states[jsonSet.states.length - 1]);
+
+				// Make sure indexFomId and fromIndex work
+				var state = jsonSet.fromIndex(jsonSet.indexFomId('jsonSep'));
+				r.same([':'], state.needs);
+			}
+	]);
+};
+
+RustyTools.Translate.StateManager.__test = function(t, r) {
+	var jsonSet;
+	var jsonManager;
+	var tokens;
+	t.test([
+			"RustyTools.Translate.StateManager.__test",
+			function(t, r) {
+				// NOTE: A real json parser would need to handl [...] too, but
+				// that would need more states, then we need for this test.
+				jsonSet = new RustyTools.Translate.StateSet([
+					{id: 'jsonName', options:RustyTools.Translate.needsJsonName},
+					{id: 'jsonSep', needs: [':']},
+					{id: 'jsonStatement', pushIf: ['{', 'jsonName'],
+							options: RustyTools.Translate.ganeralStatement, scopeSymbols:true},
+					{restartIf: [','], needs: [',', '}'], scopeSymbols:false}
+				]);
+
+				jsonManager = new RustyTools.Translate.StateManager(jsonSet, 'jsonName');
+
+				tokens = [
+					new RustyTools.Translate.Token("string", 2, "name1", 1, 1, true),
+					new RustyTools.Translate.Token("punctuation", 1, ":", 1, 10, true),
+					new RustyTools.Translate.Token("number", 3, "1.1", 1, 20, true),
+					new RustyTools.Translate.Token("punctuation", 1, ",", 1, 30, true),
+
+					new RustyTools.Translate.Token("string", 2, "name2", 2, 1, true),
+					new RustyTools.Translate.Token("punctuation", 1, ":", 2, 10, true),
+					RustyTools.addOneLevel(
+						new RustyTools.Translate.Token("grouping", 4, "{", 2, 20, true),
+						{groupingCount: 1, closer: '}'}
+					),
+					new RustyTools.Translate.Token("string", 2, "name3", 2, 1, true),
+					new RustyTools.Translate.Token("punctuation", 1, ":", 2, 10, true),
+					new RustyTools.Translate.Token("number", 3, "3.3", 1, 20, true),
+					new RustyTools.Translate.Token("punctuation", 1, ",", 1, 30, true),
+
+					new RustyTools.Translate.Token("string", 2, "name4", 2, 1, true),
+					new RustyTools.Translate.Token("punctuation", 1, ":", 2, 10, true),
+					new RustyTools.Translate.Token("number", 3, "4.4", 1, 20, true),
+					RustyTools.addOneLevel(
+						new RustyTools.Translate.Token("grouping", 4, "}", 2, 20, true),
+						{groupingCount: 1}
+					),
+				];
+
+				var symbolTable = {myProp: 'test'};	// Empty except for myProp
+				var otherSymbolTable;
+				// stateManager does not automatically advance on strings or numbers or
+				// symbols.  Force that here,
+				for (var i=0; i<tokens.length; i++) {
+					var token = tokens[i];
+					var newSymbolTable = jsonManager.handleScope(token, symbolTable);
+					if (symbolTable !== newSymbolTable) {
+						symbolTable = newSymbolTable;
+						if (!otherSymbolTable) otherSymbolTable = newSymbolTable;
+					}
+					if ('string' === token.type || 'number' === token.type) {
+						jsonManager.advance();
+					} else {
+						var newSymbolTable = jsonManager.transitionOnToken(token, symbolTable);
+						if (symbolTable !== newSymbolTable) {
+							symbolTable = newSymbolTable;
+							if (!otherSymbolTable) otherSymbolTable = newSymbolTable;
+						}
+					}
+				}
+
+				// If the stateManager worked symbolTable should have wrapped and unwrapped.
+				// otherSymbolTable will hold a reference to the wrapped symbol table.
+				r.is(symbolTable.hasOwnProperty('myProp')).
+					not(otherSymbolTable.hasOwnProperty('myProp'));
+
+				// The end state should have no id
+				r.not(jsonManager.current.state.id);
+			}
+	]);
+};
+
 RustyTools.Translate.NumberToken.__test = function(t, r) {
 	// Decimal constructor
 	var number = new RustyTools.Translate.NumberToken({decimal: '\\.', exp: '[eE]'});
@@ -177,13 +350,15 @@ RustyTools.Translate.LiteralToken.__test = function(t, r) {
 };
 
 RustyTools.Translate.__test = function(t, r) {
-	var translate = new RustyTools.Translate(['++', '+', '--', '-', '.', ',', '*', ';',
-			'//', '/', '%', '!', '===', '=='],
+	var translate = new RustyTools.Translate(['+', '-', '.', ',', ';',
+			'===', '=='],
+			['++', '--', '~', '!'],	// Unary
+			['*', '--', '/', '%'],	// Binary
 			['=', '+=', '-=','*=', '/='],	// assignment
 			['{', '}', '(', ')', '[', ']'], // grouping
 			['blockComment',  new RustyTools.Translate.LiteralToken({prefix:'/\\*', suffix:'\\*/'}),
-			'comment',  new RustyTools.Translate.LiteralToken(),
-			'float', new RustyTools.Translate.NumberToken({decimal: '\\.', exp: '[eE]'}),
+			'comment',  new RustyTools.Translate.LiteralToken()],
+			['float', new RustyTools.Translate.NumberToken({decimal: '\\.', exp: '[eE]'}),
 			'octal', new RustyTools.Translate.NumberToken({prefix: '0', numerals: '[0-7]'}),
 			'hex', new RustyTools.Translate.NumberToken({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}),
 			'dec', new RustyTools.Translate.NumberToken(),
@@ -192,7 +367,7 @@ RustyTools.Translate.__test = function(t, r) {
 	t.test([
 			"RustyTools.Translate.__test\n" +
 			"Translate.extractTokens",
-			function(t, r) {r.same(translate.tokenTypes.length, 13);},
+			function(t, r) {r.same(translate.tokenTypes.length, 32);},
 			function(t, r) {r.different(translate.tokenizer, null);},
 			function(t, r) {
 					var tokens = translate.extractTokens(
