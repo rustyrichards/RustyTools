@@ -161,17 +161,17 @@ RustyTools.__test = function(t, r) {
 			}
 		},
 
-		'RustyTools.getUri, RustyTools.load, RustyTools.waitForCondition tested with RustyTools.waitForLoad',
+		'RustyTools.getUri, and RustyTools.load',
 		function(t, r) {
-			var loading  = RustyTools.waitForLoad("RustyTools.Empty",
+			var loading  = RustyTools.load(null, "RustyTools.Empty",
 				function() {
 					// This was an asyncronous callback, so run .test to test and show the results.
 					t.test([
-						'RustyTools.waitForLoad callback',
+						'RustyTools.load callback',
 						function(t, r) {
 							// RustyTools.Empty should have loaded.
 							// Check this by looking for a false return from RustyTools.load
-							r.not(RustyTools.load("RustyTools.Empty"));
+							r.not(RustyTools.load(null, "RustyTools.Empty"));
 						}
 					]);
 				});

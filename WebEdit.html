@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+		<title>Web Edit</title>
+		<!-- Leave off the protocol, so that same protocol as the web page will be used. -->
+		<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Anonymous+Pro">
+		<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Cousine">
+		<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Droid+Sans+Mono">
+		<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Inconsolata">
+		<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lekton">
+		<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Nova+Mono">
+		<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ubuntu+Mono">
+		<link rel="stylesheet" href="//fonts.googleapis.com/css?family=VT323">
+		<style>
+			body {position:fixed; top:0; right:0; bottom:0; left:0;
+					font-family:Georgia; margin:0; padding:0;}
+			.edit-position {position:absolute; top:1.4em; right:0; bottom:0; left:0;
+					tab-size:2; -o-tab-size:2; -moz-tab-size:2;}
+			.editframe {position:absolute; top:0; right:0; bottom:0; left:0;
+					white-space:pre-wrap; overflow:auto; border-width:3px;
+					border-style:ridge; border-color:#ccc; padding: 5px;}
+			.settings {position:fixed; top:0; right:0; left:0; height:1.4em; z-index:2;}
+			.settings ul {list-style-type:none;}
+			.settings > ul:first-child {margin-left:3px;}
+			.settings #file-name {margin-top:0px; width:100%;}
+			.settings div {overflow: hidden; margin-right:3px;}
+			.menu {display:inline-block; margin:0; padding:0; float:left;}
+			.menu .drop-menu {background-color:white; width:5em;
+					display:inline-block; padding:2px; float:left;
+					border-left:1px solid #ddd;}
+			.menu .drop-menu:hover {background-color:#eee;}
+			.menu ul {margin-left:0; display:none; border-top:1px solid #ccc;
+					width:12em; background-color:#eee; padding:2px 0; margin-top:4px;
+					box-shadow:3px 3px 2px black; border-top:1px solid #666;}
+			.menu #file-list {width:25em;}
+			.settings a {color:black; text-decoration:none; cursor:pointer;}
+			.menu ul:hover {display:block;}
+			.menu ul li:hover {background-color:#cff;}
+			.menu li:hover > ul {display:block;}
+			.font-anonymous-pro {font-family: 'Anonymous Pro', monospace;}
+			.font-courier-new {font-family: 'Courier New', monospace;}
+			.font-cousine {font-family: Cousine, monospace;}
+			.font-droid-sans-mono {font-family: 'Droid Sans Mono', monospace;}
+			.font-inconsolata {font-family: Inconsolata, monospace;}
+			.font-lekton {font-family: Lekton, monospace;}
+			.font-nova-mono {font-family: 'Nova Mono', monospace;}
+			.font-ubuntu-mono {font-family: 'Ubuntu Mono', monospace;}
+			.font-VT323 {font-family: VT323, monospace;}
+			.right {float:right;}
+			.hidden {display:none;}
+		</style>
+		<style>
+			.error {color:#b00;}
+			.number {color:#06a;}
+			.string {color:#b60;}
+			.operator {color:#960;}
+			.assignment {color:#a90;}
+			.global {color:#0b9;}
+			.keyword {color:#099;}
+			.argument {color:#009;}
+			.function {color:#069;}
+			.special {color:#06f;}
+			.variable {color:#09f;}
+			.valueKeyword {color:#0ff;}
+			.member {color:#69f;}
+			.comment {color:#990;}
+			.group-1 {color:#906;}
+			.group0 {color:#000;}
+			.group1 {color:#0a0;}
+			.group2 {color:#00a;}
+			.group3 {color:#990;}
+			.group4 {color:#099;}
+			.group5 {color:#909;}
+			.group6 {color:#0b9;}
+			.group7 {color:#09b;}
+			.unknown {color:#946;}
+		</style>
+		<script src="Lib/rustyTools.js"></script>
+		<script src="Lib/rustyToolsFn.js"></script>
+		<script src="Lib/rustyToolsStr.js"></script>
+		<script src="Lib/rustyToolsTranslate.js"></script>
+		<script src="Lib/rustyToolsTree.js"></script>
+		<script src="Lib/rustyToolsXhr.js"></script>
+		<script src="Syntax/javaScriptSyntaxCheck.js"></script>
+		<script src="WebEdit/WebEdit.js"></script>
+	</head>
+	<body onload="page.load();">
+		<div class="settings">
+			<ul class="menu">
+				<li class="drop-menu"><a href="#">Options</a>
+					<ul>
+						<li><a href="#">Colors</a></li>
+						<li><hr></li>
+						<li>
+							<div>
+								<label for="font-size">Font Size: </label>
+								<div class="right"><input id="font-size" type="number" min="6"
+										max="36" value="12" step="2"
+										oninput="editControl.fontSizeChanged(event);"/></div>
+							</div>
+						</li>
+						<li>
+							<div>
+								<label for="tab-size">Tab Size: </label>
+								<div class="right"><input id="tab-size" type="number" min="1"
+										max="16" value="2" step="1"
+										oninput="editControl.tabSizeChanged(event);"/></div>
+								</div>
+						</li>
+					</ul>
+				</li>
+				<li class="drop-menu"><a href="#">Files</a>
+					<ul id="file-list" onclick="page.fileChanged(event);">
+					</ul>
+				</li>
+				<li class="drop-menu"><a href="#">Font</a>
+					<ul onclick="editControl.fontChanged(event);">
+						<li><input type="radio" name="font" value="font-anonymous-pro"/>
+								<span class="font-anonymous-pro">Anonymous Pro</span</li>
+						<li><input type="radio" name="font" value="font-courier-new"/>
+								<span class="font-courier-new">Courier New</span</li>
+						<li><input type="radio" name="font" value="font-cousine"
+								checked="checked"><span class="font-cousine">Cousine</span</li>
+						<li><input type="radio" name="font" value="font-droid-sans-mono"/>
+								<span class="font-droid-sans-mono">Droid Sans Mono</span</li>
+						<li><input type="radio" name="font" value="font-inconsolata"/>
+								<span class="font-inconsolata">Inconsolata</span</li>
+						<li><input type="radio" name="font" value="font-lekton"/>
+								<span class="font-lekton">Lekton</span</li>
+						<li><input type="radio" name="font" value="font-nova-mono"/>
+								<span class="font-nova-mono">Nova Mono</span</li>
+						<li><input type="radio" name="font" value="font-ubuntu-mono"/>
+								<span class="ont-ubuntu-mono">Ubuntu Mono</span</li>
+						<li><input type="radio" name="font" value="font-VT323"/>
+								<span class="font-VT323">VT323</span</li>
+					</ul>
+				</li>
+			</ul>
+			<div><input id="file-name" type="text" readonly/></div>
+		</div>
+		<div class="edit-position">
+			<div class="font-cousine" sytle="font-size:12pt" id="edit-parent">
+			</div>
+		</div>
+	</body>
+</html>

@@ -1,5 +1,3 @@
-RustyTools.load('RustyTools.Str', 'RustyTools.Tree');
-
 RustyTools.configure({
 	matchFail: '<#regex/>.find(<#source/>)\n\t==\n<#match/>\n\tnot\n<#shouldMatch/>',
 	noMatchFail: '<#regex/>.find(<#source/>)\n\t==\n<#match/>',

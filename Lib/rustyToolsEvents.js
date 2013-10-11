@@ -138,11 +138,29 @@ RustyTools.Events = {
 				"useCapture": opt_useCapture, "id": callbackId};
 	},
 
-	removeEventListener: function(listenerInfo) {
+	addEventListeners: function(element, events) {
 		"use strict";
-		listenerInfo['element'].removeEventListener(listenerInfo['type'],
-				listenerInfo['binding'], listenerInfo['useCapture']);
-		delete this.callbacks[listenerInfo['id']];
+		var unlisteners = []
+
+		for (var i in events) {
+			unlisteners.push(this.addEventListener(element, i, events[i]));
+		}
+		return unlisteners
+	},
+
+	removeEventListeners: function(listeners) {
+		"use strict";
+
+		// Could be a single listener.
+		if (!listeners.length) listeners = [listeners];
+
+		var index = listeners.length;
+		while (index--) {
+			var listenerInfo = listeners[index];
+			listenerInfo['element'].removeEventListener(listenerInfo['type'],
+					listenerInfo['binding'], listenerInfo['useCapture']);
+			delete this.callbacks[listenerInfo['id']];
+		}
 	},
 
 	startEventLogging: function() {

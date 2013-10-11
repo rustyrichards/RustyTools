@@ -712,6 +712,8 @@ RustyTools.Translate.prototype.parse_ = function(tokens, parser,
 		// Put the state itno the token for diagnostic purposes.
 		token.state = stateManager.current.state;
 
+		var stateName = (token.state) ? (token.state.id || '') : '';
+
 		// Usually 2 tokens are sufficient.  If the handler needs more it can
 		// call getNExtToken.
 		var nextToken = this.getNextToken(tokens, index);
@@ -724,39 +726,20 @@ RustyTools.Translate.prototype.parse_ = function(tokens, parser,
 		// The later per-token str cal could determine the validity of the token.
 
 		var next;
-		// Pass all properties through anyToken if it exists
-		var methodName = '__' + type;
-		if ('function' === typeof parser.anyToken) {
-			try {
-				parser.anyToken(context, str, token, stateManager, symbolTable,
-						previousToken, nextToken, tokens, this);
-			} catch(e) {}
-		}
 
-		// If it exists call a handler for the given token type.
-		// Prefix with __ so that we don't accitentally hit other members of parser.
-		methodName = '__' + type;
-		if ('function' === typeof parser[methodName]) {
-			try {
-				parser[methodName](context, str, token, stateManager, symbolTable,
-						previousToken, nextToken, tokens, this);
-			} catch(e) {}
-		}
+		// Call the parser on anyToken, type, str, and stateName
 
-		// Could check to see that 'function' == typeof parser[str]
-		// but this needs a try ... catch anyway, so skip the extra step.
-		//
-		// If it exists call a handler for the given token string.
-		// Prefix with __ so that we don't accitentally hit other members of parser.
-		methodName = '__' + str;
-		if ('function' === typeof parser[methodName]) {
-			try {
-				parser[methodName](context, str, token, stateManager, symbolTable,
-						previousToken, nextToken, tokens, this);
-				// If the return is anything other the undefined or null this overrides
-				// the more general return above.
-				if (symbolNext != null) next = symbolNext;
-			} catch (e) {}
+		var calls = [parser.anyToken, parser['__' + type], parser['__' + str],
+				parser['__' + stateName]];
+
+		for (var i=0; i<calls.length; i++) {
+			var fn = calls[i];
+			if (fn && 'function' === typeof fn) {
+				try {
+					fn.call(parser, context, str, token, stateManager, symbolTable,
+							previousToken, nextToken, tokens, this);
+				} catch(e) {}
+			}
 		}
 
 		// Processing the token may have changed the state manually. If it did don't

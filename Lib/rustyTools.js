@@ -205,11 +205,11 @@ RustyTools = {
 	},
 
 	// Load any other one of the RustyTools...
-	getUri: function(rustyToolsObjName) {
+	getUri: function(rustyToolsObjName, opt_path) {
 		"use strict";
 		var fileName = rustyToolsObjName.replace(/\./g, '').replace(/^[A-Z]/g,
 			function(match) {return match.toLowerCase();});
-		return  RustyTools.cfg.rustyScriptPath + fileName + '.js';
+		return  (opt_path || RustyTools.cfg.rustyScriptPath) + fileName + '.js';
 	},
 
 	// Convert the name (e.g. "RustyTools.Str") to the object->member it references.
@@ -231,21 +231,33 @@ RustyTools = {
 	// Note: The script will load and complete as the DOM handles it.
 	//       This does not try to take the place of ATM; it does nothing to
 	//        control the time the execution of the script is started.
-	load: function(/* rustyToolsObjName(s) */) {
+	load: function(path, rustyToolsObjName, opt_successCallback) {
 		"use strict";
+		var script;
 		var needsToLoad = false;
-		for (var i=0; i<arguments.length; i++) {
-			var obj = RustyTools.pathToMember(arguments[i]);
+		var obj = RustyTools.pathToMember(rustyToolsObjName);
 
-			if (!obj && self.document) {
-				var script = self.document.createElement('script');
-				script.setAttribute("type","text/javascript");
-				script.setAttribute("src", RustyTools.getUri(arguments[i]));
-				self.document.getElementsByTagName("head")[0].appendChild(script);
-				needsToLoad = true;
+		if (!obj && self.document) {
+			var script = self.document.createElement('script');
+			script.type = "text/javascript";
+			script.src = RustyTools.getUri(rustyToolsObjName, path);
+			if (opt_successCallback) {
+				if (script.readyState) {
+					// IE  - use the readyState crap.
+					script.onreadystatechange = function() {
+						if (script.readyState === "loaded" ||
+								script.readyState === "complete"){
+							script.onreadystatechange = null;
+							opt_successCallback();
+						}
+					};
+				} else {
+					script.onload = opt_successCallback;
+				}
 			}
+			document.getElementsByTagName("head")[0].appendChild(script);
 		}
-		return needsToLoad;
+		return script;
 	},
 
 	// Wait until fmCondition passes then call fnCallback.  This is usefull for
@@ -276,18 +288,19 @@ RustyTools = {
 	},
 
 	// Wait for the RustyTools.load
-	waitForLoad: function(rustyToolsObjName, fnCallback, opt_interval) {
+	loadInOrder: function(path, rustyToolsObjName /* moreRustyToolsObjName(s) */) {
 		"use strict";
-		var loading = RustyTools.load(rustyToolsObjName);
-		if (loading) {
-			RustyTools.waitForCondition(function() {
-				// Return true if the rustyToolsObjName object eists.
-				return !!RustyTools.pathToMember(rustyToolsObjName);
-			}, fnCallback, opt_interval);
+		var callback;
+		if (arguments.length > 2) {
+			var context = this;
+			var nextArgs = Aray.prototype.slice.call(arguments, 2);
+			nextArgs.unshift(path);
+			callback = function() {
+				context.loadInOrder.apply(context, nextArgs)
+			}
 		}
-		// else RustyTools.load returns flas means already loaded.
 
-		return loading;
+		return this.load(path, rustyToolsObjName, callback);
 	}
 };
 

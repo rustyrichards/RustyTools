@@ -42,11 +42,11 @@ RustyTools.Events.__test = function(t, r) {
 			// Dispatch the event.
 			testEl.dispatchEvent(event);
 
-			RustyTools.Events.removeEventListener(toUnlisten);
+			RustyTools.Events.removeEventListeners(toUnlisten);
 
 			r.is(passedThrough);
 		},
-		'RustyTools.Events.removeEventListener\n' +
+		'RustyTools.Events.removeEventListeners\n' +
 		'RustyTools.Events.startEventLogging\n'+
 		'RustyTools.Events.endEventLogging and\n' +
 		'RustyTools.Events.runLoggedEvents',
@@ -71,7 +71,7 @@ RustyTools.Events.__test = function(t, r) {
 
 			RustyTools.Events.runLoggedEvents(events);
 
-			RustyTools.Events.removeEventListener(toUnlisten);
+			RustyTools.Events.removeEventListeners(toUnlisten);
 			r.same(eventCount, 2).same(events.length, 1);
 		},
 	]);
