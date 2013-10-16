@@ -44,6 +44,32 @@ RustyTools.Str.__test = function(t, r) {
 			r.same(str, 'ABC 5.1 3.14159');
 		},
 
+		'RustyTools.Str.removeClasses',
+		function(t, r) {
+			var source = 'test toRemove2 other';
+			var output = RustyTools.Str.removeClasses(source, 'toRemove1',
+					'toRemove2', 'toRemove3');
+
+			r.different(source, output).same(output, 'test other');
+		},
+
+		'RustyTools.Str.addClasses',
+		function(t, r) {
+			var source = 'test toAdd2 other';
+			var output = RustyTools.Str.addClasses(source, 'toAdd1', 'toAdd2', 'toAdd3');
+
+			r.different(source, output).same(output, 'test other toAdd1 toAdd2 toAdd3');
+		},
+
+		'RustyTools.Str.toggleClasses',
+		function(t, r) {
+			var source = 'test toToggle2 other';
+			var output = RustyTools.Str.toggleClasses(source, 'toToggle1', 'toToggle2',
+					'toToggle3');
+
+			r.different(source, output).same(output, 'test other toToggle1 toToggle3');
+		},
+
 		'RustyTools.Str.multiReplace',
 		function(t, r) {
 			var source = 'Param1: <#1/>, Param12: <#12/>, Param2: <#2/>, Param3: <#3/>, ' +
@@ -111,9 +137,9 @@ RustyTools.Str.__test = function(t, r) {
 		'RustyTools.Str.getParamValues',
 		function(t,r) {
 			var testStr = '?a=testing&multi=one&multi=two&encoded=' + encodeURIComponent('?&=');
-			var a = RustyTools.Str.getQueryValues(testStr, 'a');
-			var multi = RustyTools.Str.getQueryValues(testStr, 'multi');
-			var encoded = RustyTools.Str.getQueryValues(testStr, 'encoded');
+			var a = RustyTools.Str.getQueryValues('a', testStr);
+			var multi = RustyTools.Str.getQueryValues('multi', testStr);
+			var encoded = RustyTools.Str.getQueryValues('encoded', testStr);
 
 			r.same(a, ['testing']).same(multi, ['one', 'two']).same(encoded, ['?&=']);
 		},

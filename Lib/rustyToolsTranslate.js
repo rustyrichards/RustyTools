@@ -128,13 +128,14 @@ RustyTools.Translate.prototype.tokenTypeIsTestable_ = function(index) {
 };
 
 RustyTools.Translate.Token = function(tokenType, typeNum, tokenStr, line,
-		position, isTestable) {
+		linePosition, charPosition, isTestable) {
 	"use strict";
 	this.type = tokenType;
 	this.typeNum = typeNum;
 	this.str = tokenStr;
 	this.line = line;
-	this.position = position;
+	this.linePosition = linePosition;
+	this.charPosition = charPosition;
 	this.isTestable = isTestable;
 };
 
@@ -151,7 +152,7 @@ RustyTools.Translate.Token.prototype.setError = function(opt_errorMessage) {
 	// Error overrides subtype.
 	if (opt_errorMessage) {
 		this.errorMessage = opt_errorMessage + '  line: ' + this.line +
-				'  position: ' + this.position;
+				'  position: ' + this.linePosition;
 	}
 	this.error = true;
 };
@@ -238,7 +239,7 @@ RustyTools.Translate.tokenOrder  = function(a, b) {
  */
 RustyTools.Translate.prototype.extractTokens = function(input) {
 	"use strict";
-	var output = [], result, line = 1, pos = 1;
+	var output = [], result, line = 1, linePos = 1, charPos = 0;
 	while((result = this.tokenizer.exec(input)) != null) {
 		for (var i=1; i<result.length; i++) {
 			var tokenStr = result[i];
@@ -254,17 +255,21 @@ RustyTools.Translate.prototype.extractTokens = function(input) {
 					tokenName = this.tokenTypes[0];
 				}
 
+				// Make sure all line breaks are \n !
+				tokenStr = tokenStr.replace(/\r\n|\r/g, '\n');
+
 				var token = new RustyTools.Translate.Token(
-						tokenName, typeNum, tokenStr, line, pos,
+						tokenName, typeNum, tokenStr, line, linePos, charPos,
 						this.tokenTypeIsTestable_(i));
 				if (!typeNum) token.setError('Unknown token: "' + token.str + '"');
 				output.push(token);
 				if (this.lineBreakIndex === typeNum) {
 					line++;
-					pos = 1;
+					linePos = 1;
 				} else {
-					pos += result[i].length;
+					linePos += tokenStr.length;
 				}
+				charPos += tokenStr.length;
 				break;
 			}
 		}
@@ -753,7 +758,7 @@ RustyTools.Translate.prototype.parse_ = function(tokens, parser,
 		if (token.unrecoverable) {
 			throw new SyntaxError(
 				'Fatal error at token: "' + tokens[index].str + '"  line: ' +
-				token.line + '  position: ' + token.position,
+				token.line + '  position: ' + token.linePosition,
 				opt_fileName || "unknown", index);
 		}
 

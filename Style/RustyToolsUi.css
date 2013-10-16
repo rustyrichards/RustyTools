@@ -1,0 +1,23 @@
+			.menu {display:inline-block; margin:0; padding:0; float:left;}
+			.menu .drop-menu {background-color:white; width:5em;
+					display:inline-block; padding:2px; float:left;
+					border-left:1px solid #ddd;}
+			.menu .drop-menu:hover {background-color:#eee;}
+			.menu ul {margin-left:0; display:none; border-top:1px solid #ccc;
+					width:12em; background-color:#eee; padding:2px 0; margin-top:4px;
+					box-shadow:3px 3px 2px black; border-top:1px solid #666;}
+			.menu #file-list {width:25em;}
+			.menu ul:hover {display:block;}
+			.menu ul li:hover {background-color:#cff;}
+			.menu li:hover > ul {display:block;}
+			.font-anonymous-pro {font-family: 'Anonymous Pro', monospace;}
+			.font-courier-new {font-family: 'Courier New', monospace;}
+			.font-cousine {font-family: Cousine, monospace;}
+			.font-droid-sans-mono {font-family: 'Droid Sans Mono', monospace;}
+			.font-inconsolata {font-family: Inconsolata, monospace;}
+			.font-lekton {font-family: Lekton, monospace;}
+			.font-nova-mono {font-family: 'Nova Mono', monospace;}
+			.font-ubuntu-mono {font-family: 'Ubuntu Mono', monospace;}
+			.font-VT323 {font-family: VT323, monospace;}
+			.right {float:right;}
+			.hidden {display:none;}

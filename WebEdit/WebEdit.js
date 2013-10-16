@@ -1,6 +1,8 @@
 /* global document */
 /* global window */
 
+var ui = RustyTools.Ui;
+
 // Inject RustyTools.Str into string to make string function chaining easier.
 String.prototype = RustyTools.cloneOneLevel(String.prototype, RustyTools.Str);
 
@@ -27,8 +29,8 @@ String.prototype.removeClass = function(/* class strings */) {
 
 // editControl handles the events from the settings.
 var editControl = {
-	fontSize: "12pt",
-	tabSize: "2",
+	fontSize: 12,
+	tabSize: 2,
 
 	translator: javaScriptSyntaxCheck.makeTranslator(),
 	symbolTableRoot: javaScriptSyntaxCheck.makeCurrentSymbolTable(),
@@ -37,35 +39,9 @@ var editControl = {
 	setCSSText: function() {
 		"use strict";
 		var css = RustyTools.Str.multiReplace(
-			'font-size:<#fontSize/>; tab-size:<#tabSize/>; -moz-tab-size:<#tabSize/>;' +
-			' -moz-tab-size:<#tabSize/>;  -ms-tab-size:<#tabSize/>;', this);
+			'font-size:<#fontSize/>pt; tab-size:<#tabSize/>; -moz-tab-size:<#tabSize/>;' +
+			' -ms-tab-size:<#tabSize/>;', this);
 		document.getElementById('edit-parent').style.cssText = css;
-	},
-
-	fontChanged: function(event) {
-		"use strict";
-		if (event.target.checked) {
-			var editParent = document.getElementById('edit-parent');
-			// Remove the old font name.  Add the selected one.
-			editParent.className = editParent.className.removeClass('font-') +
-					' ' + event.target.value;
-		}
-	},
-
-	fontSizeChanged: function(event) {
-		"use strict";
-		if (event.target) {
-			this.fontSize = event.target.value + "pt";
-			this.setCSSText();
-		}
-	},
-
-	tabSizeChanged: function(event) {
-		"use strict";
-		if (event.target) {
-			this.tabSize = event.target.value;
-			this.setCSSText();
-		}
 	},
 
 	getSelectionText: function() {
@@ -199,6 +175,50 @@ var editControl = {
 		}
 	},
 
+	options: function(event) {
+		// /[^#]*#/ - all before and including the #
+		switch (event.target.href.replace(/[^#]*#/, '')) {
+			case 'tab+':
+				if (1 == this.tabSize) this.tabSize = 2;
+				else if (16 > this.tabSize) this.tabSize +=2;
+				break;
+			case 'tab-':
+				if (2 < this.tabSize) this.tabSize -= 2;
+				else this.tabSize = 1;
+				break;
+			case 'font+':
+				if (36 > this.fontSize) this.fontSize += 2;
+				break;
+			case 'font-':
+				if (6 < this.fontSize) this.fontSize -= 2;
+				break;
+			case 'toggleLineNumbers':
+				var editParent = document.getElementById('edit-parent');
+				if (-1 !== editParent.className.search(/\bno-numbers/)) {
+					editParent.className = editParent.className.removeClass('no-numbers');
+				} else {
+					editParent.className = editParent.className + ' no-numbers';
+				}
+
+		}
+		this.setCSSText();
+	},
+
+	font: function(event) {
+		"use strict";
+		// /[^#]*#/ - all before and including the #
+		var element = event.target;
+		while ('A' !== element.tagName) element = element.parentNode;
+
+		var fontName = element.href.replace(/[^#]*#/, '');
+		if (event.target.checked) {
+			var editParent = document.getElementById('edit-parent');
+			// Remove the old font name.  Add the selected one.
+			editParent.className = editParent.className.removeClass('font-') +
+					' ' + fontName;
+		}
+	},
+
 	copy: function(event) {
 		"use strict";
 		event.preventDefault();
@@ -234,12 +254,10 @@ var editControl = {
 
 	tokenToMarkup: function(result, token) {
 		"use strict";
+		// Inject the first line number
 		if ('number' !== typeof token) {
 			switch(token.type) {
 				case 'lineBreak':
-					// Force all line breaks to \n.
-					token.str = '\n';
-					// Fall through wanted.
 				case 'whitespace':
 					result +=  RustyTools.Str.mulitReplaceCleanup(
 							RustyTools.Str.multiReplace('<span id="token-<#index/>" ' +
@@ -289,9 +307,14 @@ var editControl = {
 
 	parseForEditor: function(tokens) {
 		"use strict";
-		return this.translator.parseTokens(tokens,
+		var count = 0;
+		var str = ui.replace(ui.lineNumber, ++count) +
+				this.translator.parseTokens(tokens,
 				javaScriptSyntaxCheck, javaScriptSyntaxCheck.stateManager,
 				this.symbolTableRoot).reduce(this.tokenToMarkup.bind(this), '');
+		return str.replace(/\r\n|\r|\n/g, function() {
+				return '\n' + ui.replace(ui.lineNumber, ++count);
+		});
 	},
 
 	// Build an array of splice commands that will convert newTokens into oldTokens
@@ -375,6 +398,17 @@ var page = {
 	fileMenuTimer: 0,
 	tabIndex: 5,
 
+	globalKeyDown: function(event) {
+		switch (event.keyCode) {
+			case 25:	// Ctrl-Y
+				event.preventDefault();
+				break;
+			case 26:	// Ctrl-Z
+				event.preventDefault();
+				break;
+		}
+	},
+
 	getActiveDocument: function() {
 		"use strict";
 		return document.getElementById('edit-area' + this.activeIndex);
@@ -404,23 +438,6 @@ var page = {
 		} else {
 			this.makeInactive(id);
 		}
-	},
-
-	generateFileMenu: function() {
-		"use strict";
-		// Generate the file menu contents
-		var shortNames = this.openedFiles.map(function(arrayElement, index) {
-				// fileName use a greedy regexp to take all characters to the last '/'
-				return {fileName: arrayElement.replace(/[\s\S]*\//, ''),
-						checked: (this.activeIndex === index) ? 'checked="checked"' : ''};
-			}, this);
-
-		var fileMenuItems = RustyTools.Str.multiReplace('<#files><li><input ' +
-				'type="radio" name="file" <#checked/> value="<+fileId/>"/>' +
-				'<#fileName/></li></#files>', {files: shortNames, fileId: 0},
-				false, true);
-
-		document.getElementById('file-list').innerHTML = fileMenuItems;
 	},
 
 	urlFailed: function(request, obj, url) {
@@ -474,19 +491,78 @@ var page = {
 					oncut: editControl.cut.bind(editControl),
 					onpaste: editControl.paste.bind(editControl)
 				}));
-
-			// Smooth out the file menu reload by delaying before updating the menu.
-			if (this.fileMenuTimer) clearTimeout(this.fileMenuTimer);
-			this.fileMenuTimer = setTimeout(this.generateFileMenu.bind(this), 1000);
 		}
 	},
 
 	load: function() {
 		"use strict";
-		this.openedFiles = RustyTools.Str.getQueryValues(document.location.search, 'href');
+		var menus = {
+			menu: [
+				{menuName: 'Options', subMenu: [
+					{content: 'Colors'},
+					{content: '<hr>'},
+					{id: 'tab+', content: 'Tab Size Increase'},
+					{id: 'tab-', content: 'Tab Size Decrease'},
+					{id: 'font+', content: 'Font Size Increase'},
+					{id: 'font-', content: 'Font Size Decrease'},
+					{content: '<hr>'},
+					{id: 'toggleLineNumbers', content: 'Toggle Line Numbers'}
+				]},
+				{menuName: 'Files', subMenu: []},
+				{menuName: 'Font', subMenu: [
+					{id: 'font-anonymous-pro', content: ui.replace(ui.radioItem, 'font',
+							'font-anonymous-pro', 'Anonymous Pro')},
+					{id: 'font-courier-new', content: ui.replace(ui.radioItem, 'font',
+							'font-courier-new', 'Courier New')},
+					{id: 'font-cousine', content: ui.replace(ui.radioItem, 'font',
+							'font-cousine', 'Cousine')},
+					{id: 'font-droid-sans-mono', content: ui.replace(ui.radioItem, 'font',
+							'font-droid-sans-mono', 'Droid Sans Mono')},
+					{id: 'font-inconsolata', content: ui.replace(ui.radioItem, 'font',
+							'font-inconsolata', 'Inconsolata')},
+					{id: 'font-lekton', content: ui.replace(ui.radioItem, 'font',
+							'font-lekton', 'Lekton')},
+					{id: 'font-nova-mono', content: ui.replace(ui.radioItem, 'font',
+							'font-nova-mono', 'Nova Mono')},
+					{id: 'font-ubuntu-mono', content: ui.replace(ui.radioItem, 'font',
+							'font-ubuntu-mono', 'Ubuntu Mono')},
+					{id: 'font-VT323', content: ui.replace(ui.radioItem, 'font',
+							'font-VT323', 'VT323')}
+				]},
+			]
+		};
+
+		this.openedFiles = RustyTools.Str.getQueryValues('href');
 		var index = this.openedFiles.length;
 		while (index--) {
 			if (!this.openedFiles[index]) this.openedFiles.splice(index, 1);
+		}
+
+		this.openedFiles.forEach(function loadFileMenu(fileUri) {
+			menus.menu[1].subMenu.push(
+					{content: ui.replace(ui.checkItem,
+					'',	// Use 'checked' to check the slected file.
+					// fileUri.replace... Show the name and extension only.
+					fileUri.replace(/.*?([^\/]+$)/, '$1'))
+					});
+		});
+
+		ui.makeComponent(ui.menu, menus, document.getElementById('menu-container'));
+
+		RustyTools.Events.addEventListener('menu-Options', 'click',
+				editControl.options.bind(editControl));
+		RustyTools.Events.addEventListener('menu-Font', 'click',
+				editControl.font.bind(editControl));
+
+		// Run a the test if the paramter &test or &test=[anything other than flase]
+		// is set.
+		var val = RustyTools.Str.getQueryValues('test');
+		// == type coersion wanted! - convert true to the string.
+		if (val.length && ('true' === val[0])) {
+			var syntaxTest = RustyTools.load.bind(RustyTools, RustyTools.cfg.
+					rustyScriptPath.replace(/\/Lib/i, '/Syntax'),
+					'javaScriptSyntaxCheck.__test');
+			RustyTools.load(null, 'RustyTools.Testing', syntaxTest);
 		}
 
 		// Load each url in href parameter(s)
@@ -497,21 +573,26 @@ var page = {
 				onFailureCallback: page.urlFailed,
 				onXMLHttpRequestLoadError: page.xhrLoadFailed});
 		}, '');
+	},
+
+	find: function(opt_editorIndex) {
+		if (opt_editorIndex == null) opt_editorIndex = this.activeIndex;
+		var exprStr = document.getElementById('regex-str').value;
+		if (!document.getElementById('use-regex').checked) exprStr = RustyTools.Str.regExpEscape(exprStr);
+		var options = (document.getElementById('no-case').checked) ? 'ig' : 'g';
+
+		var expr = new RegExp(exprStr, options);
+		var str = this.openedFileTokens[opt_editorIndex].reduce(
+				function(result, token) {
+					return result + token.str;
+				}, '');
+// For now this is just a test.  The match must be translated back to the edit.
+		var matchArr, count = 1
+		while ((matchArr = expr.exec(str)) !== null) {
+			RustyTools.log("Match #" + count++ + ' ends at: ' + matchArr.lastIndex);
+		}
 	}
 };
-
-{
-	// Run a the test if the paramtere &test or &test=[anything other than flase]
-	// is set.
-	var match = window.location.search.match(/(?:\?|&)test(=[^&]*)?/i);
-	if (match.length && match[0] && (!match[1] || 'false' != match[1].toLowerCase())) {
-		var syntaxTest = RustyTools.load.bind(RustyTools, RustyTools.cfg.
-				rustyScriptPath.replace(/\/Lib/i, '/Syntax'),
-				'javaScriptSyntaxCheck.__test');
-		RustyTools.load(null, 'RustyTools.Testing', syntaxTest);
-	}
-}
-
 
 /***
 Bookmarklet to edit the current web page.

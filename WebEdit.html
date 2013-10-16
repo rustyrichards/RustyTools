@@ -15,16 +15,33 @@
 		<style>
 			body {position:fixed; top:0; right:0; bottom:0; left:0;
 					font-family:Georgia; margin:0; padding:0;}
+			li {padding-left:3px;}
+			.line-number {width:6ex; text-align:right; display:inline-block;
+					color:#999; margin-right:1ex; pointer-events:none;}
+			.no-numbers .line-number {display:none;}
 			.edit-position {position:absolute; top:1.4em; right:0; bottom:0; left:0;
 					tab-size:2; -o-tab-size:2; -moz-tab-size:2;}
+			#edit-parent {position:absolute; top:0; right:0; bottom:0; left:0;}
+			.search-replace {display:none;}
+			.search #edit-parent {bottom:7ex;}
+			.search .search-replace {display:block; position:absolute; height:7ex; right:0; bottom:0; left:0;}
+			.search-replace .input-label {width:8ex; display:inline-block;}
+			.search-replace .check-label {width:11ex; display:inline-block;}
+			.search-replace input[type='text'] {
+		    width: -moz-calc(100% - 57ex);
+		    width: -webkit-calc(100% - 57ex);
+		    width: calc(100% - 57ex);
+		  }
+			.search-replace input[type='button'] {width:15ex;}
 			.editframe {position:absolute; top:0; right:0; bottom:0; left:0;
 					white-space:pre-wrap; overflow:auto; border-width:3px;
 					border-style:ridge; border-color:#ccc; padding: 5px;}
 			.settings {position:fixed; top:0; right:0; left:0; height:1.4em; z-index:2;}
 			.settings ul {list-style-type:none;}
 			.settings > ul:first-child {margin-left:3px;}
+			.settings #menu-container {float:left;}
 			.settings #file-name {margin-top:0px; width:100%;}
-			.settings div {overflow: hidden; margin-right:3px;}
+			.settings .file-name {overflow: hidden; margin-right:3px;}
 			.menu {display:inline-block; margin:0; padding:0; float:left;}
 			.menu .drop-menu {background-color:white; width:5em;
 					display:inline-block; padding:2px; float:left;
@@ -35,6 +52,7 @@
 					box-shadow:3px 3px 2px black; border-top:1px solid #666;}
 			.menu #file-list {width:25em;}
 			.settings a {color:black; text-decoration:none; cursor:pointer;}
+			.settings input[type='number'] {width:6em;}
 			.menu ul:hover {display:block;}
 			.menu ul li:hover {background-color:#cff;}
 			.menu li:hover > ul {display:block;}
@@ -48,6 +66,7 @@
 			.font-ubuntu-mono {font-family: 'Ubuntu Mono', monospace;}
 			.font-VT323 {font-family: VT323, monospace;}
 			.right {float:right;}
+			.force-right {margin-left:auto;}
 			.hidden {display:none;}
 		</style>
 		<style>
@@ -77,71 +96,33 @@
 			.unknown {color:#946;}
 		</style>
 		<script src="Lib/rustyTools.js"></script>
+		<script src="Lib/rustyToolsEvents.js"></script>
 		<script src="Lib/rustyToolsFn.js"></script>
 		<script src="Lib/rustyToolsStr.js"></script>
 		<script src="Lib/rustyToolsTranslate.js"></script>
 		<script src="Lib/rustyToolsTree.js"></script>
+		<script src="Lib/rustyToolsUi.js"></script>
 		<script src="Lib/rustyToolsXhr.js"></script>
 		<script src="Syntax/javaScriptSyntaxCheck.js"></script>
 		<script src="WebEdit/WebEdit.js"></script>
 	</head>
 	<body onload="page.load();">
-		<div class="settings">
-			<ul class="menu">
-				<li class="drop-menu"><a href="#">Options</a>
-					<ul>
-						<li><a href="#">Colors</a></li>
-						<li><hr></li>
-						<li>
-							<div>
-								<label for="font-size">Font Size: </label>
-								<div class="right"><input id="font-size" type="number" min="6"
-										max="36" value="12" step="2"
-										oninput="editControl.fontSizeChanged(event);"/></div>
-							</div>
-						</li>
-						<li>
-							<div>
-								<label for="tab-size">Tab Size: </label>
-								<div class="right"><input id="tab-size" type="number" min="1"
-										max="16" value="2" step="1"
-										oninput="editControl.tabSizeChanged(event);"/></div>
-								</div>
-						</li>
-					</ul>
-				</li>
-				<li class="drop-menu"><a href="#">Files</a>
-					<ul id="file-list" onclick="page.fileChanged(event);">
-					</ul>
-				</li>
-				<li class="drop-menu"><a href="#">Font</a>
-					<ul onclick="editControl.fontChanged(event);">
-						<li><input type="radio" name="font" value="font-anonymous-pro"/>
-								<span class="font-anonymous-pro">Anonymous Pro</span</li>
-						<li><input type="radio" name="font" value="font-courier-new"/>
-								<span class="font-courier-new">Courier New</span</li>
-						<li><input type="radio" name="font" value="font-cousine"
-								checked="checked"><span class="font-cousine">Cousine</span</li>
-						<li><input type="radio" name="font" value="font-droid-sans-mono"/>
-								<span class="font-droid-sans-mono">Droid Sans Mono</span</li>
-						<li><input type="radio" name="font" value="font-inconsolata"/>
-								<span class="font-inconsolata">Inconsolata</span</li>
-						<li><input type="radio" name="font" value="font-lekton"/>
-								<span class="font-lekton">Lekton</span</li>
-						<li><input type="radio" name="font" value="font-nova-mono"/>
-								<span class="font-nova-mono">Nova Mono</span</li>
-						<li><input type="radio" name="font" value="font-ubuntu-mono"/>
-								<span class="ont-ubuntu-mono">Ubuntu Mono</span</li>
-						<li><input type="radio" name="font" value="font-VT323"/>
-								<span class="font-VT323">VT323</span</li>
-					</ul>
-				</li>
-			</ul>
-			<div><input id="file-name" type="text" readonly/></div>
+		<div id="settings" class="settings">
+			<div id="menu-container"></div>
+			<div class="file-name"><input id="file-name" type="text" readonly/></div>
 		</div>
-		<div class="edit-position">
-			<div class="font-cousine" sytle="font-size:12pt" id="edit-parent">
+		<div class="edit-position search">
+			<div id="edit-parent" class="font-cousine" sytle="font-size:12pt">
 			</div>
+			<div class="search-replace">
+				<div><label for="regex-str" class="input-label">Find:</label><input type="text" id="regex-str"/>
+					<label for="use-regex" class="check-label">Use RegExp</label><input type="checkbox" id="use-regex" checked="true"/>
+					<input type="button" onclick="page.find();" value="Find Next"/><input type="button" value="Find Previous"/>
+				</div>
+				<div><label for="replace-str" class="input-label">Replace:</label><input type="text" id="replace-str"/>
+					<label for="no-case" class="check-label">Ignore Case</label><input type="checkbox" id="no-case"/>
+					<input type="button" value="Replace"/><input type="button" value="Replace All"/>
+				</div>
 		</div>
 	</body>
 </html>

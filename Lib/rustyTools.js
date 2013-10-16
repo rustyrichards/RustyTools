@@ -48,11 +48,19 @@ RustyTools = {
 		return dest;
 	},
 
+	/**
+	 * Make a dom element and set any properties.
+	 */
 	createDomElement: function(templateObj, opt_document) {
 		var element = (opt_document || document).createElement(templateObj.tag);
 		RustyTools.addOneLevel(element, templateObj);
 		return element;
 	},
+
+	/**
+	 * Deny a dom event.
+	 */
+	disallow: function() {return false;},
 
 	cloneOneLevel: function(/* objects */) {
 		"use strict";

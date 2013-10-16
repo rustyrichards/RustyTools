@@ -306,6 +306,52 @@ RustyTools.Str = {
 	},
 
 	/*
+	 * For CSS
+	 */
+	// remove class names
+	removeClasses: function(str /*, className [, className ...] */) {
+		"use strict";
+		var output = str;
+		for (var i=1; i<arguments.length; i++) {
+			var expr = new RegExp('\\s*\\b' + this.regExpEscape(arguments[i]));
+			output = output.replace(expr, '');
+		}
+		return output
+	},
+
+	// add classes
+	addClasses: function(str /*, className [, className ...] */) {
+		"use strict";
+		// Don't douplicate so remove then add.
+		var params = Array.prototype.slice.call(arguments, 0);
+		var output = this.removeClasses.apply(this, params);
+		for (var i=1; i<arguments.length; i++) {
+			if (output) output += ' ';
+			output += arguments[i];
+		}
+		return output
+	},
+
+	// toggle classes
+	toggleClasses: function(str /*, className [, className ...] */) {
+		"use strict";
+		// Remove, then if the size did not change add.
+		var output = str;
+		for (var i=1; i<arguments.length; i++) {
+			var oldLen = output.length;
+			var expr = new RegExp('\\s*\\b' + this.regExpEscape(arguments[i]));
+			output = output.replace(expr, '');
+			// If it wan't removed  - then add.
+			if (oldLen === output.length) {
+				if (output) output += ' ';
+				output += arguments[i];
+			}
+		}
+		return output
+	},
+
+
+	/*
 	 * multiReplace - replace the taga <#id>...</#id>, <#id/>, or <+id/> etc with the supplied
 	 *                parameters. (The <+id should be numbers they will be pos incremented.)
 	 *
@@ -357,14 +403,15 @@ RustyTools.Str = {
 								// Remove one level of - from <-*n
 								var adjContent = content.replace(/(<\/?-*?)-([\+#])/g, '$1$2');
 
-								// For any recursive calls opt_keepSource should be false or omitted.
 								if (Array.isArray(substValue)) {
 									matches[key] = '';
 									for (var j=0; j<substValue.length; j++) {
-										matches[key] += context.multiReplace(adjContent, substValue[j]);
+										matches[key] += context.multiReplace(adjContent,
+												substValue[j], opt_encoding, opt_doNotChangeSubst);
 									}
 								} else if (substValue instanceof Object) {
-									matches[key] = context.multiReplace(adjContent, substValue);
+									matches[key] = context.multiReplace(adjContent, substValue,
+											opt_encoding, opt_doNotChangeSubst);
 								}
 							} else if (!matches[key]) {
 								matches[key] = RustyTools.Str.toString(substValue);
@@ -424,19 +471,22 @@ RustyTools.Str = {
 		return str.replace(/(\$|\(|\)|\*|\+|\.|\/|\?|\[|\\|\]|\^|\{|\||\})/g, '\\$1');
 	},
 
-	getQueryValues: function(str, key) {
-		"use strict";
-		var expr = new RegExp( '(?:\\?|&)' + RustyTools.Str.regExpEscape(key) + '=([^&]*)', 'g');
+	getQueryValues: function(key, opt_queryStr) {
+		var output = [];
 
-		var result = [];
-		var matches;
-		while (matches = expr.exec(str)) {
-			if (1 < matches.length) result = result.concat(matches.slice(1));
+		if (!opt_queryStr) opt_queryStr = window.location.search;
+		var regEx = new RegExp("(?:\\?|&)" + RustyTools.Str.regExpEscape(key) +
+				"(?:=([^&]+))?", "ig");
+		while ((match = regEx.exec(opt_queryStr)) != null) {
+			if (match[0]) {
+				if (match[1]) {
+					output.push(decodeURIComponent(match[1]));
+				} else {
+					output.push('true');
+				}
+			}
 		}
-
-		if (result.length) result = result.map(decodeURIComponent);
-
-		return result;
+		return output;
 	},
 
 	markupToPlainText: function(str) {

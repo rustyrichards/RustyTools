@@ -124,8 +124,10 @@ RustyTools.Events = {
 
 	addEventListener: function(element, type, callback, opt_useCapture) {
 		"use strict";
-		var callbackId = this.getXPathTo(element) + type + (opt_useCapture) ? 'Capture' :
-				'Bubble' + callback.toString();
+		if ('string' === typeof element) element = document.getElementById(element);
+
+		var callbackId = this.getXPathTo(element) + type + (opt_useCapture) ?
+				'Capture' : 'Bubble' + callback.toString();
 
 		this.callbacks[callbackId] = callback;
 		var binding = this.eventPassThrough.bind(this, callbackId, callback);

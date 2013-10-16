@@ -203,6 +203,7 @@ var javaScriptSyntaxCheck = {
 				'number', new RustyTools.Translate.NumberToken({prefix: '0', numerals: '[0-7]'}),
 				'number', new RustyTools.Translate.NumberToken({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}),
 				'number', new RustyTools.Translate.NumberToken(),
+				'regExp', new RustyTools.Translate.LiteralToken({prefix: '/', escape: '\\\\', suffix: '/'}),
 				'symbol', new RustyTools.Translate.SymbolToken()]);
 	},
 
@@ -255,12 +256,12 @@ var javaScriptSyntaxCheck = {
 			// A valid binary +
 			token.clearError();
 			token.subType = 'binary';
-			stateManager.push('needsValue');
+			stateManager.push('needsValue', token);
 		} else if (nextToken && nextToken.possibleValue()) {
 			// A valid unary +  (Note: does not apply to strings.)
 			token.clearError();
 			token.subType = 'unary';
-			stateManager.push('needsValue');
+			stateManager.push('needsValue', token);
 		} else {
 			token.setError('Token "+" is not allowed in this context.')
 		}
@@ -278,12 +279,12 @@ var javaScriptSyntaxCheck = {
 			// A valid binary -
 			token.clearError();
 			token.subType = 'binary';
-			stateManager.push('needsValue');
+			stateManager.push('needsValue', token);
 		} else if (nextToken && nextToken.possibleValue()) {
 			// A valid unary -  (Note: does not apply to strings.)
 			token.clearError();
 			token.subType = 'unary';
-			stateManager.push('needsValue');
+			stateManager.push('needsValue', token);
 		} else {
 			token.setError('Token "-" is not allowed in this context.')
 		}
@@ -383,7 +384,7 @@ var javaScriptSyntaxCheck = {
 			token.clearError();
 			token.subType = 'conditional';
 			stateManager.advance();	// The ? has been handled.
-			stateManager.push('condNeedsFirst');
+			stateManager.push('condNeedsFirst', token);
 		} else {
 			token.setError('Token "-" is not allowed in this context.')
 		}
@@ -399,7 +400,7 @@ var javaScriptSyntaxCheck = {
 					'" is not allowed in a var or function declaration.');
 		} else if (previousToken && previousToken.needTwoValues(nextToken)) {
 			token.clearError();
-			stateManager.push('needsValue');
+			stateManager.push('needsValue', token);
 		} else {
 			token.setError('Cannot perform the operation "' + (previousToken) ?
 					previousToken.str : previousToken + ' ' + str + ' ' +
