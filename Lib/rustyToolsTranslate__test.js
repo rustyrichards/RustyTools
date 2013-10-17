@@ -10,9 +10,11 @@ RustyTools.Translate.Token.__test = function(t, r) {
 			"Translate.",
 			function(t, r) {
 				untestableToken = new RustyTools.Translate.Token("strange-comment", 99,
-						"--special--",  1/* line */, 10 /* position */, false /* not testable */);
+						"--special--",  1/* line */, 10 /* position */,
+						10 /* charPosition */, false /* not testable */);
 				testableToken = new RustyTools.Translate.Token("symbol", 99,
-						"+",  1/* line */, 10 /* position */, true /* testable */);
+						"+",  1/* line */, 10 /* position */,
+						10 /* charPosition */,  true /* testable */);
 				r.different(untestableToken.type, testableToken.type).
 						same(untestableToken.typeNum, testableToken.typeNum).
 						different(untestableToken.str, testableToken.str);
@@ -44,7 +46,8 @@ RustyTools.Translate.Token.__test = function(t, r) {
 				// isSame only the .type and .str matter to isSame.
 				// (Note .error is not counted.)
 				var newToken = new RustyTools.Translate.Token("symbol", 101,
-						"+",  10/* line */, 100 /* position */, false /* not-testable */);
+						"+",  10/* line */, 100 /* position */,
+						1000 /* charPosition */, true /* testable */);
 
 				// Same as testableToken different from untestableToken
 				r.is(newToken.isSame(testableToken)).not(newToken.isSame(untestableToken));
@@ -52,9 +55,11 @@ RustyTools.Translate.Token.__test = function(t, r) {
 			function(t, r) {
 				// noReparse and replace.
 				var whiteToken = new RustyTools.Translate.Token("whitespace", 101,
-						" ",  10/* line */, 100 /* position */, false /* not-testable */);
+						" ",  10/* line */, 100 /* position */,
+						1000 /* charPosition */, false /* not-testable */);
 				var whiteToken2 = new RustyTools.Translate.Token("comment", 111,
-						"/* test */",  11/* line */, 121 /* position */, false /* not-testable */);
+						"/* test */",  11/* line */, 121 /* position */,
+						1221 /* charPosition */, false /* not-testable */);
 
 				// whiteToken to whiteToken2 - no need to re-parse.
 				// Replace whiteToken with whiteToken2, whiteToken's line does not change
@@ -116,27 +121,27 @@ RustyTools.Translate.StateManager.__test = function(t, r) {
 				jsonManager = new RustyTools.Translate.StateManager(jsonSet, 'jsonName');
 
 				tokens = [
-					new RustyTools.Translate.Token("string", 2, "name1", 1, 1, true),
-					new RustyTools.Translate.Token("punctuation", 1, ":", 1, 10, true),
-					new RustyTools.Translate.Token("number", 3, "1.1", 1, 20, true),
-					new RustyTools.Translate.Token("punctuation", 1, ",", 1, 30, true),
+					new RustyTools.Translate.Token("string", 2, "name1", 1, 1, 1, true),
+					new RustyTools.Translate.Token("punctuation", 1, ":", 1, 10, 10, true),
+					new RustyTools.Translate.Token("number", 3, "1.1", 1, 20, 20, true),
+					new RustyTools.Translate.Token("punctuation", 1, ",", 1, 30, 30, true),
 
-					new RustyTools.Translate.Token("string", 2, "name2", 2, 1, true),
-					new RustyTools.Translate.Token("punctuation", 1, ":", 2, 10, true),
+					new RustyTools.Translate.Token("string", 2, "name2", 2, 1, 40, true),
+					new RustyTools.Translate.Token("punctuation", 1, ":", 2, 10, 50, true),
 					RustyTools.addOneLevel(
-						new RustyTools.Translate.Token("grouping", 4, "{", 2, 20, true),
+						new RustyTools.Translate.Token("grouping", 4, "{", 2, 20, 60, true),
 						{groupingCount: 1, closer: '}'}
 					),
-					new RustyTools.Translate.Token("string", 2, "name3", 2, 1, true),
-					new RustyTools.Translate.Token("punctuation", 1, ":", 2, 10, true),
-					new RustyTools.Translate.Token("number", 3, "3.3", 1, 20, true),
-					new RustyTools.Translate.Token("punctuation", 1, ",", 1, 30, true),
+					new RustyTools.Translate.Token("string", 2, "name3", 2, 1, 70, true),
+					new RustyTools.Translate.Token("punctuation", 1, ":", 2, 10, 80, true),
+					new RustyTools.Translate.Token("number", 3, "3.3", 1, 20, 90, true),
+					new RustyTools.Translate.Token("punctuation", 1, ",", 1, 30, 100, true),
 
-					new RustyTools.Translate.Token("string", 2, "name4", 2, 1, true),
-					new RustyTools.Translate.Token("punctuation", 1, ":", 2, 10, true),
-					new RustyTools.Translate.Token("number", 3, "4.4", 1, 20, true),
+					new RustyTools.Translate.Token("string", 2, "name4", 2, 1, 110, true),
+					new RustyTools.Translate.Token("punctuation", 1, ":", 2, 10, 120, true),
+					new RustyTools.Translate.Token("number", 3, "4.4", 1, 20, 130, true),
 					RustyTools.addOneLevel(
-						new RustyTools.Translate.Token("grouping", 4, "}", 2, 20, true),
+						new RustyTools.Translate.Token("grouping", 4, "}", 2, 20, 140, true),
 						{groupingCount: 1}
 					),
 				];

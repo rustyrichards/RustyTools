@@ -1,13 +1,28 @@
 if (!RustyTools) RustyTools = {};
 
-RustyTools.Events = {
-	callbacks: {},
 
-	eventLog: null,
+/**
+ * Create a RustyTools.Events to be able to record and playback events.
+ *
+ * Use:
+ *	EVENTS.wrap(eventCallBack, opt_context)
+ * 	to wrap an event handler in the record and playback support
+ *
+ * Use:
+ *	EVENTS.startRecording() and EVENTS.stopRecording()
+ *	to start and stop the event rtecording.
+ *
+ * Use:
+ *	EVENTS.playback() to playback the events.
+ */
+RustyTools.Events = function() {
+	this.record;
+};
 
-	// getXPathTo taken from:
-	// http://stackoverflow.com/questions/2631820/im-storing-click-coordinates-in-my-db-and-then-reloading-them-later-and-showing/2631931#2631931
-	// Answer by bobince
+// getXPathTo taken from:
+// http://stackoverflow.com/questions/2631820/im-storing-click-coordinates-in-my-db-and-then-reloading-them-later-and-showing/2631931#2631931
+// Answer by bobince
+RustyTools.Events.prototype = {
 	getXPathTo: function(element) {
 		"use strict";
 		var path = '';
@@ -78,7 +93,7 @@ RustyTools.Events = {
 		return element;
 	},
 
-	makeEventSave: function(callbackId, ev) {
+	makeEventSave: function(callback, ev) {
 		"use strict";
 		// Copy the ev, in the ev all nodes/elements must be replaced
 		// by the xpath.
@@ -87,7 +102,7 @@ RustyTools.Events = {
 		for (var i=0; i<keys.length; i++) {
 			var key = keys[i];
 			try {
-				if (clone[key].nodeType) {
+				if (clone[key] && clone[key].nodeType) {
 					// NOTE: calculate the path from the origional element
 					// or the  === test will fail!
 					clone['__path:' + key] = this.getXPathTo(ev[key]);
@@ -95,7 +110,7 @@ RustyTools.Events = {
 				}
 			} catch(e) {}
 		}
-		clone.__callbackId = callbackId;
+		clone.__callback = callback;
 		return clone;
 	},
 
@@ -115,82 +130,53 @@ RustyTools.Events = {
 		return clone;
 	},
 
-	eventPassThrough: function(callbackId, callback, ev) {
+	eventPassThrough: function(callback, ev) {
 		"use strict";
-		if (this.eventLog) this.eventLog.push(this.makeEventSave(callbackId, ev));
+		if (this.record) this.record.push(this.makeEventSave(callback, ev));
 
 		return callback(ev);
 	},
 
-	addEventListener: function(element, type, callback, opt_useCapture) {
+	wrap: function(eventCallback, opt_context) {
 		"use strict";
-		if ('string' === typeof element) element = document.getElementById(element);
+		if (opt_context) eventCallback = eventCallback.bind(opt_context);
 
-		var callbackId = this.getXPathTo(element) + type + (opt_useCapture) ?
-				'Capture' : 'Bubble' + callback.toString();
-
-		this.callbacks[callbackId] = callback;
-		var binding = this.eventPassThrough.bind(this, callbackId, callback);
-
-		// NOTE: element.addEventListener allows for adding multiple listeners to
-		// the same event!
-		element.addEventListener(type, binding, opt_useCapture);
-
-		return {"element": element, "type": type, "binding": binding,
-				"useCapture": opt_useCapture, "id": callbackId};
+		return this.eventPassThrough.bind(this, eventCallback);
 	},
 
-	addEventListeners: function(element, events) {
+	startRecording: function() {
 		"use strict";
-		var unlisteners = []
-
-		for (var i in events) {
-			unlisteners.push(this.addEventListener(element, i, events[i]));
-		}
-		return unlisteners
+		this.record = [];
+		return this.record;
 	},
 
-	removeEventListeners: function(listeners) {
+	stopRecording: function() {
 		"use strict";
-
-		// Could be a single listener.
-		if (!listeners.length) listeners = [listeners];
-
-		var index = listeners.length;
-		while (index--) {
-			var listenerInfo = listeners[index];
-			listenerInfo['element'].removeEventListener(listenerInfo['type'],
-					listenerInfo['binding'], listenerInfo['useCapture']);
-			delete this.callbacks[listenerInfo['id']];
-		}
+		var recording = this.record;
+		this.record = null;
+		return recording;
 	},
 
-	startEventLogging: function() {
+	playback: function(recording) {
 		"use strict";
-		this.eventLog = [];
-	},
+		if (recording && recording.length) {
+			var event = recording[0];
+			var callback = event.__callback;
+			delete event.__callback;
+			callback(this.pathsToElements(event));
 
-	endEventLogging: function() {
-		"use strict";
-		var result = this.eventLog;
-		this.eventLog = null;
-		return result;
-	},
+			var rest = recording.slice(1);
 
-	runLoggedEvents: function(events) {
-		"use strict";
-		for (var i=0; i<events.length; i++) {
-			var event = events[i];
-
-			try {
-				this.callbacks[event.__callbackId](this.pathsToElements(event));
-			} catch (e) {
-				RustyTools.logException(e);
+			// These were async evnets, so make the call async.  Don't loop.
+			if (rest.length) {
+				setTimeout(this.playback.bind(this, rest), 0);
 			}
 		}
 	}
 };
 
 // Use the xpath evaluate if it exists, othewise use the custom simpleXPathToElement.
-RustyTools.Events.pathToElement = (self.document.evaluate && self.XPathResult) ?
-		RustyTools.Events.evaluateToElement : RustyTools.Events.simpleXPathToElement;
+RustyTools.Events.prototype.pathToElement =
+		(self.document.evaluate && self.XPathResult) ?
+		RustyTools.Events.prototype.evaluateToElement :
+		RustyTools.Events.prototype.simpleXPathToElement;

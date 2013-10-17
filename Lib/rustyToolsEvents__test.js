@@ -2,47 +2,48 @@
 "use strict";
 
 RustyTools.Events.__test = function(t, r) {
-	var testEl, path;
+	var testEl, path, events;
 
 	// Top level RustyTools.Events methods
 	t.test([
 		'RustyTools.Events.__test\n' +
 		'RustyTools.Events.getXPathTo',
 		function(t, r) {
+			events = new RustyTools.Events();
 			testEl = document.getElementById('json').firstChild.firstChild;
 
-			path = RustyTools.Events.getXPathTo(testEl);
+			path = events.getXPathTo(testEl);
 			r.same(path, 'id("json")/DIV[1]/DIV[1]');
 		},
 		'RustyTools.Events.evaluateToElement',
 		function(t, r) {
-			r.same(RustyTools.Events.evaluateToElement(path), testEl);
+			r.same(events.evaluateToElement(path), testEl);
 		},
 		'RustyTools.Events.simpleXPathToElement',
 		function(t, r) {
-			r.same(RustyTools.Events.simpleXPathToElement(path), testEl);
+			r.same(events.simpleXPathToElement(path), testEl);
 		},
 		'RustyTools.Events.pathToElement',
 		function(t, r) {
-			r.same(RustyTools.Events.pathToElement(path), testEl);
+			r.same(events.pathToElement(path), testEl);
 		},
 		'RustyTools.Events.makeEventSave\n' +
 		'RustyTools.Events.eventPassThrough and\n'+
 		'RustyTools.Events.addEventListener',
 		function(t, r) {
-
-			var event = new CustomEvent('CustomEvent', { 'destEl': testEl });
+			var custom = new CustomEvent('CustomEvent', { 'destEl': testEl });
 
 			var passedThrough = false;
 			// Listen for the event.
-			var toUnlisten = RustyTools.Events.addEventListener(testEl, 'CustomEvent',
+			var wrappedEvent = events.wrap(
 					function(ev) {
 						passedThrough = ev.srcElement === testEl;
 					});
+			testEl.addEventListener('CustomEvent', wrappedEvent);
 			// Dispatch the event.
-			testEl.dispatchEvent(event);
+			testEl.dispatchEvent(custom);
 
-			RustyTools.Events.removeEventListeners(toUnlisten);
+			testEl.removeEventListener('CustomEvent', wrappedEvent);
 
 			r.is(passedThrough);
 		},
@@ -52,27 +53,28 @@ RustyTools.Events.__test = function(t, r) {
 		'RustyTools.Events.runLoggedEvents',
 		function(t, r) {
 
-			var event = new CustomEvent('CustomEvent', { 'destEl': testEl });
+			var custom = new CustomEvent('CustomEvent', { 'destEl': testEl });
 
 			var eventCount = 0;
 			// Listen for the event.
-			var toUnlisten = RustyTools.Events.addEventListener(testEl, 'CustomEvent',
+			var wrappedEvent = events.wrap(
 			function(ev) {
 				if (ev.srcElement === testEl) eventCount++;
 			});
+			testEl.addEventListener('CustomEvent', wrappedEvent);
 
-			RustyTools.Events.startEventLogging();
+			events.startRecording();
 			// Dispatch the event.
-			testEl.dispatchEvent(event);
+			testEl.dispatchEvent(custom);
 
-			var events = RustyTools.Events.endEventLogging();
+			var recording = events.stopRecording();
 
-			r.logObjects(events[0]);
+			r.logObjects(recording[0]);
 
-			RustyTools.Events.runLoggedEvents(events);
+			events.playback(recording);
 
-			RustyTools.Events.removeEventListeners(toUnlisten);
-			r.same(eventCount, 2).same(events.length, 1);
+			testEl.removeEventListener('CustomEvent', wrappedEvent);
+			r.same(eventCount, 2).same(recording.length, 1);
 		},
 	]);
 };
