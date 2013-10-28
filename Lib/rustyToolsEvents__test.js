@@ -27,9 +27,8 @@ RustyTools.Events.__test = function(t, r) {
 		function(t, r) {
 			r.same(events.pathToElement(path), testEl);
 		},
-		'RustyTools.Events.makeEventSave\n' +
-		'RustyTools.Events.eventPassThrough and\n'+
-		'RustyTools.Events.addEventListener',
+		'RustyTools.Events.makeEventSave and\n' +
+		'RustyTools.Events.eventPassThrough',
 		function(t, r) {
 			var custom = new CustomEvent('CustomEvent', { 'destEl': testEl });
 

@@ -1,3 +1,5 @@
+/* global RustyTools */
+
 // Javascript parsing
 
 // The javascript language is almost flat; the variables are not block scoped.
@@ -6,103 +8,315 @@
 // states are handled by testing context.functionStack, context.loopStack, and
 // context.switchStack
 
-var JavaScriptStateManager = function(stateSet, stateFlagStr, opt_exitSymbol, opt_exitCount) {
-	"use strict";
-	RustyTools.Translate.StateManager.apply(this, Array.prototype.slice.call(arguments, 0));
-
-	// Only "{...}" blocks can be Object notation.  But, function blocks, and
-	// if, do, and while blocks can not be object notation.
-	this.current.canBeJSON = false;
-};
-JavaScriptStateManager.prototype = Object.create(RustyTools.Translate.StateManager.prototype);
-
-/**
- * setCanBeJSON - mainly for chaining.  The default for canBeJSON is false
- * for each block/new JavaScriptStateManager
- */
-JavaScriptStateManager.prototype.setCanBeJSON = function(canBeJSON) {
-	"use strict";
-	this.current.canBeJSON = canBeJSON;
-
-	return this;	// For chaining.
-};
+// The Object Notation / JSON is only for JavaScript.
+RustyTools.Translate.types.colon = ["-jsonSep", "-conditional"];
 
 var javaScriptStates = new RustyTools.Translate.StateSet([
-		// General statements
-		null,
-		{id: 'statement', pushIf: ['{', 'statement', '(', 'statement'],
-				restartIf: [';', ','], options: RustyTools.Translate.ganeralStatement},
-		null,
-		// If we encounter a varibale in general statement push to hasVar
-		{id: 'hasVar', pushIf: ['{', 'statement', '(', 'statement'], pushOnAssign: 'needsValue',
-				restartIf: [','], popIf: [';'], options: RustyTools.Translate.hasVar},	// Can assign to the variable
-		null,
-		// If we encounter an assignment in RustyTools.Translate.hasVar push to needsValue
-		{id: 'needsValue', pushIf: ['{', 'statement','(', 'statement'],
-				options: RustyTools.Translate.needsRValue},	// Something to assign
-		{id: 'valueStatment', pushIf: ['{', 'statement', '(', 'valueStatment'],
-				popIf: [';', ','], options: RustyTools.Translate.ganeralStatement},
-		null,	// pop when we have the value
-		// Single general statements
-		{id: 'oneStatement', pushIf: ['{', 'statement', '(',  'statement'],
-				restartIf: [','], endif: [';'],
-				options: RustyTools.Translate.ganeralStatement},
-		null,
-		// Argument or argument list.
-		{id: 'arg', pushIf: ['{', 'statement', '(', 'statement'],
-				options: RustyTools.Translate.needsRValue},
-		{id: 'argHasValue', pushIf: ['{', 'statement', '(', 'statement'],
-				restartIf: [','], options: RustyTools.Translate.hasRValue},	// Must be a comma or a state pop
-		null,
-		// Object notation statement
-		{id: 'jsonName', options:RustyTools.Translate.needsJsonName},
-		{id: 'jsonSep', needs: [':']},
-		{id: 'jsonStatement', pushIf: ['{', 'statement', '(', 'statement'],
-				restartIf: [','], options: RustyTools.Translate.ganeralStatement},
-		null,
-		{id: 'functionDef', optiions: RustyTools.Translate.varDef},
-		{id: 'functionBeforeArg', needs: ['('], pushIf: ['(', 'arg'], scopeSymbols:true},
-		{id: 'functionBeforeBlock', needs: ['{'], pushIf: ['{', 'statement']},
-		{needs: ['}'], scopeSymbols: false},
-		null,
-		{id: 'varStatement', optiions: RustyTools.Translate.varDef},
-		{id: 'varDefined', restartIf: [','], popIf: [';'],
-				options: RustyTools.Translate.hasVar},
-		null,
-		{id: 'swtichNeedsArg', needs: ['('], pushIf: ['(', 'singleValueArg']},
-		{id: 'switchBeforeBody', needs: ['{'], pushIf: ['{', 'statement']},
-		null,
-		{id: 'singleValueArg', popIf: [')'], restartIf: [','],
-				options: RustyTools.Translate.needsRValue},
-		{id: 'singleValueHasArg', needs: [')'], popIf: [')'], restartIf: ',',
-				options: RustyTools.Translate.hasRValue},
-		null,
-		// case statnment
-		{id: 'caseNeedsValue', options: RustyTools.Translate.needsRValue},
-		{id: 'caseHasValue', needs: [':'], popIf: [':']},
-		null,
-		// Conditional statement first half
-		{id: 'condNeedsFirst', pushIf: ['{', 'statement', '(', 'statement'],
-				options: RustyTools.Translate.needsRValue},
-		{id: 'condHasFirst', needs: [':'], pushIf: [':', 'condNeedsSecond'],
-				restartIf: [',']},
-		// Trick to make the restart work - the ':' jumps to 'condNeedsSecond'
-		null,
-		// Conditional statement second half
-		{id: 'condNeedsSecond', pushIf: ['{', 'statement', '(', 'statement'],
-						options: RustyTools.Translate.needsRValue},
-		{id: 'condHasSecond', endif: [';'], restartIf: [',']},
-		null,
-		// for statement
-		{id: 'forDefinition', needs: ['('], pushIf: ['(', 'inForStatement1']},
-		{id: 'forBeforeBlock', pushIf: ['{', 'statement'],
-				push: 'oneStatement'},
-		// If there is a block it will stack
-		null,
-		// for arguments
-		{id: 'inForStatement1', push: 'oneStatement'},
-		{id: 'inForStatement2', push: 'oneStatement'},
-		{id: 'inForStatement3', jump: 'arg'},	// Jump so the statement exit on the closing ')'
+	// General statements
+	null,
+	{
+		id: "statement",
+		allowed: {
+			"-groupStart": true,
+			"do": true, "for": true,
+			"function": true, "if": true,
+			"swtich" : true, "try": true,
+			"var": true, "while": true,
+			"-assignment": true, "-alteration": true,
+			"-value": true, "-variable": true, "-global": true,
+			";": true, ",": true
+		},
+		pushIf: {
+			"-groupStart": "statement",
+			"do": "doDefinition", "for": "forDefitition",
+			"function": "functionDef", "if": "ifDefinition",
+			"swtich" : "switchDefinition", "try": "tryDefinition",
+			"var": "varStatement", "while": "whileDefinition",
+			"-assignment": "needsValue", "-alteration": "needsValue",
+			"-value": "hasVar", "-variable": "hasVar", "-global": "hasVar"
+
+		},
+		restartIf: {";": true, ",": true},
+		options: RustyTools.Translate.ganeralStatement,
+		jump: 0	// loop forever in statement
+	},
+	null,
+
+	// If we encounter a varibale in general statement push to hasVar
+	{
+		id: "hasVar",
+		allowed: {
+			"{": true, "(": true, ".": true, "[": true, "-assignment": true,
+			"-alteration": true, ",": true, ";": true
+		},
+		pushIf: {
+			"{": "statement", "(": "arg", ".": "memberAccess",
+			"[": "oneArg", "-assignment": "needsValue", "-alteration": "needsValue"
+		},
+		popIf: {",": true, ";": true},
+		options: RustyTools.Translate.hasVar
+	},	// Can assign to the variable
+	null,
+
+	// Accessing an object"s members. (Array access is allowee here too.)
+	{id: "memberAccess", options: RustyTools.Translate.anySymbolName},
+	{
+		id: "memberNext",
+		allowed: {".": true, "[": true},
+		bypassIfNot: {",": true, ";": true},
+		restartIf: {".": true},
+		pushif: {"[": "oneArg"}
+	},
+	null,
+
+	// If we encounter an assignment in RustyTools.Translate.hasVar push to needsValue
+	// NOTE: a "{" following an assignment goes into objectNotation (JSON)
+	{
+		id: "needsValue",
+		allowed: {"{": true, "(": true,	"function": true,
+			"-global": true, "-parameter": true, "-value": true, "-variable": true,
+			"-string": true, "-number": true},
+		pushIf: {"{": "jsonName", "(": "statement",	"function": "functionDef"},
+		options: RustyTools.Translate.needsRValue,	// Something to assign
+	},
+	{
+		id: "valueStatement",
+		allowed: {"(": true, ".": true, "[": true},
+		pushIf: {"(": "arg", ".": "memberAccess", "[": "oneArg"},
+		bypassIfNot: {"(": true, ".": true, "[": true},
+		options: RustyTools.Translate.ganeralStatement
+	},
+	null,	// pop when we have the value
+
+	// Single general statements
+	{
+		id: "oneStatement",
+		allowed: {
+			"-groupStart": true,
+			"do": true, "for": true,
+			"function": true, "if": true,
+			"swtich" : true, "try": true,
+			"var": true, "while": true,
+			"-assignment": true, "-alteration": true,
+			"-value": true, "-variable": true, "-global": true,
+			";": true, ",": true
+		},
+		pushIf: {
+			"-groupStart": "statement",
+			"do": "doDefinition", "for": "forDefitition",
+			"function": "functionDef", "if": "ifDefinition",
+			"swtich" : "switchDefinition", "try": "tryDefinition",
+			"var": "varStatement", "while": "whileDefinition",
+			"-assignment": "needsValue", "-alteration": "needsValue",
+			"-value": "hasVar", "-variable": "hasVar", "-global": "hasVar"
+		},
+		restartIf: {",": true},
+		popIf: {";": true},
+		options: RustyTools.Translate.ganeralStatement
+	},
+	null,
+
+	// Only a single argument. (Like in array access, io an if statement.)
+	{
+		id: "oneArg",
+		allowed: {"{": true, "(": true,	"function": true,
+			"-global": true, "-parameter": true, "-value": true, "-variable": true,
+			"-string": true, "-number": true},
+		pushIf: {"{": "jsonName", "(": "statement",	"function": "functionDef"},
+		options: RustyTools.Translate.needsRValue
+	},
+	{
+		id: "oneArgHasValue", restartIf: {",": true},
+		pushIf: {"[": "oneArg", "(": "arg", ".": "memberAccess"},
+		allowed: {",": true, "{": true, "(": true, ".": true},	// The closing '}' or ']' will pop
+		restartIf: {",": true},
+		options: RustyTools.Translate.hasRValue	// Must be a comma or a state pop
+	},	// Must be a comma or a state pop
+	null,
+
+	// Argument or argument list.
+	{
+		id: "arg",
+		allowed: {"{": true, "(": true,	"function": true,
+			"-global": true, "-parameter": true, "-value": true, "-variable": true,
+			"-string": true, "-number": true},
+		pushIf: {"{": "jsonName", "(": "statement",	"function": "functionDef"},
+		options: RustyTools.Translate.needsRValue},
+	{
+		id: "argHasValue",
+		pushIf: {"[": "oneArg", "(": "arg", ".": "memberAccess"},
+		allowed: {",": true, "{": true, "(": true, ".": true},	// The closing '}' will pop
+		restartIf: {",": true},
+		options: RustyTools.Translate.hasRValue	// Must be a comma or a state pop
+	},
+	null,
+
+	// Function argument list.  These args define as parameters.
+	{
+		id: "functionParam",
+		pushIf: {"{": "statement", "(": "statement"},
+		options: RustyTools.Translate.paramDef},
+	{
+		id: "functionParamHasValue",
+		allowed: {"{": true, "(": true, "[": true, ",": true},
+		pushIf: {"{": "statement", "(": "statement", "[": "oneArg"},
+		restartIf: {",": true},
+		options: RustyTools.Translate.hasVar	// Must be a comma or a state pop
+	},
+	null,
+
+	// Object notation statement
+	{id: "jsonName", options:RustyTools.Translate.needsJsonName},
+	{id: "jsonSep", allowed: {":": true}},
+	{
+		id: "jsonStatement",
+		pushIf: {"{": "jsonName", "(": "statement", "[": "jsonArray"},
+		restartIf: {",": true},
+		options: RustyTools.Translate.ganeralStatement
+	},
+	null,
+
+	// jsonArray - like an argument list except it stays in Object Notation.
+	{
+		id: "jsonArray",
+		allowed: {"{": true, "[": true,	"function": true,
+			"-global": true, "-parameter": true, "-value": true, "-variable": true,
+			"-string": true, "-number": true},
+		pushIf: {"{": "jsonName", "[": "jsonArray",	"function": "functionDef"},
+		options: RustyTools.Translate.needsRValue
+	},
+	{
+		id: "jsonArrayItem",
+		pushIf: {"[": "oneArg", "(": "arg", ".": "memberAccess"},
+		allowed: {",": true, "{": true, "(": true, ".": true},	// The closing '}' will pop
+		restartIf: {",": true},
+		options: RustyTools.Translate.hasRValue	// Must be a comma or a state pop
+	},
+	null,
+
+	// A function may define a name or be anonymous. jumpIf: {"(", 1} steps to the next state
+	{
+		id: "functionDef",
+		bypassIf: {"(": 1},
+		options: RustyTools.Translate.varDef
+	},
+	{id: "functionBeforeArg", allowed: {"(": true}, pushIf: {"(": "functionParam"}, scopeSymbols:true},
+	{id: "functionBeforeBlock", allowed: {"{": true}, pushIf: {"{": "statement"}},
+	{allowed: {"}": true}, scopeSymbols: false},
+	null,
+
+	{id: "varStatement", options: RustyTools.Translate.varDef},
+	{id: "varDefined", allowed: {",": true, ";": true, "-assignment": true},
+			restartIf: {",": true}, popIf: {";": true},
+			pushIf: {"-assignment": "needsValue"}, options: RustyTools.Translate.hasNewVar},
+	null,
+
+	{id: "swtichNeedsArg", allowed: {"(": true}, pushIf: {"(": "oneArg"}},
+	{id: "switchBeforeBody", allowed: {"{": true}, pushIf: {"{": "statement"}},
+	null,
+
+	// case statnment
+	{
+		id: "caseNeedsValue",
+		allowed: {"{": true, "(": true,	"function": true,
+			"-global": true, "-parameter": true, "-value": true, "-variable": true,
+			"-string": true, "-number": true},
+		pushIf: {"{": "jsonName", "(": "statement",	"function": "functionDef"},
+		options: RustyTools.Translate.needsRValue
+	},
+	{
+		id: "caseHasValue",
+		pushIf: {"[": "oneArg", "(": "arg", ".": "memberAccess"},
+		allowed: {",": true, "{": true, "(": true, ".": true, ":": true},
+		restartIf: {",": true},
+		popIf: {":": true},
+		options: RustyTools.Translate.hasRValue	// Must be a comma or a state pop
+	},
+	null,
+
+	// Conditional statement first half
+	{
+		id: "condNeedsFirst",
+		allowed: {"{": true, "(": true,	"function": true,
+			"-global": true, "-parameter": true, "-value": true, "-variable": true,
+			"-string": true, "-number": true},
+		pushIf: {"{": "jsonName", "(": "statement",	"function": "functionDef"},
+		options: RustyTools.Translate.needsRValue
+	},
+	{
+		id: "condHasFirst",
+		pushIf: {"[": "oneArg", "(": "arg", ".": "memberAccess", ":": "condNeedsSecond"},
+		allowed: {",": true, "{": true, "(": true, ".": true, ":": true},
+		restartIf: {",": true}
+	},
+	// Trick to make the restart work - the ":" jumps to "condNeedsSecond"
+	null,
+
+	// Conditional statement second half
+	{
+		id: "condNeedsSecond",
+		allowed: {"{": true, "(": true,	"function": true,
+			"-global": true, "-parameter": true, "-value": true, "-variable": true,
+			"-string": true, "-number": true},
+		pushIf: {"{": "jsonName", "(": "statement",	"function": "functionDef"},
+		options: RustyTools.Translate.needsRValue
+	},
+	{
+		id: "condHasSecond",
+		pushIf: {"[": "oneArg", "(": "arg", ".": "memberAccess", ":": "condNeedsSecond"},
+		allowed: {",": true, "{": true, "(": true, ".": true, ";": true},
+		restartIf: {",": true},
+		popIf: {";": true}
+	},
+	null,
+
+	// for statement
+	{id: "forDefinition", allowed: {"(": true}, pushIf: {"(": "inForStatement1"}},
+	{id: "forBeforeBlock", pushIf: {"{": "statement"}, push: "oneStatement"},
+	// If there is a block it will stack
+	null,
+
+	// for arguments
+	{id: "inForStatement1", push: "oneStatement"},
+	{id: "inForStatement2", push: "oneStatement"},
+	{id: "inForStatement3", jump: "oneStatement"},	// Jump so the oneStatement pop will return to the caller.
+
+	// if statement
+	{id: "ifDefinition", allowed: {"(": true}, pushIf: {"(": "oneArg"}},
+	{id: "ifBeforeBlock", pushIf: {"{": "statement"}, push: "oneStatement"},
+	{id: "ifAfterBlock", jumpIf: {"else": "elseDefinition"}, pop: true},
+	null,
+
+	// else statement
+	{id: "elseDefinition", pushIf: {"{": "statement"}, push: "oneStatement"},
+	{id: "ifAfterBlock", jumpIf: {"else": "elseDefinition"}, pop: true},
+	null,
+
+	// switch statement
+	{id: "switchDefinition", allowed: {"(": true}, pushIf: {"(": "oneArg"}},
+	{id: "whileBeforeBlock", allowed: {"{": true}, pushIf: {"{": "statement"}},
+	null,
+
+	// try statement
+	{id: "tryDefinition", allowed: {"{": true}, pushIf: {"{": "statement"}},
+	{id: "tryAfterBlock", allowed: {"catch": true, 'finally': true}, jumpIf: {
+		"catch": "catchDefinition", "finally": "finallyhDefinition"}},
+	null,
+
+	// catch statement
+	{id: "catchDefinition", allowed: {"(": true}, pushIf: {"(": "oneArg"}},
+	{id: "catchBeforeBlock", allowed: {"{": true}, pushIf: {"{": "statement"}},
+	{id: "catchAfterBlock", jumpIf: {"finally": "finallyhDefinition"}, pop: true},
+	null,
+
+	// finally statement
+	{id: "finallyDefinition", allowed: {"{": true}, pushIf: {"{": "statement"}},
+	null,
+
+	// while statement
+	{id: "whileDefinition", allowed: {"(": true}, pushIf: {"(": "oneArg"}},
+	{id: "whileBeforeBlock", pushIf: {"{": "statement"}, push: "oneStatement"},
+	null
 ]);
 
 // SyntaxCheck - it does not produce the parse tree. It tests and sets the
@@ -111,49 +325,142 @@ var javaScriptSyntaxCheck = {
 	state: 0,								// Used for validation and state progression
 
 	// Prefix with '__' to make the cloning easy
-	keywords: {"__arguments": 'valueKeyword', "__break": 'keyword', "__case": 'keyword',
-			"__catch": 'keyword', "__continue": 'keyword', "__debugger": 'keyword',
-			"__default": 'keyword', "__delete": 'keyword', "__do": 'keyword',
-			"__else": 'keyword', "__false": 'valueKeyword', "__finally": 'keyword',
-			"__for": 'keyword', "__function": 'valueKeyword', "__if": 'keyword',
-			"__in": 'keyword', "__instanceof": 'valueKeyword', "__new": 'valueKeyword',
-			"__return": 'keyword', "__switch": 'keyword', "__this": 'valueKeyword',
-			"__throw": 'keyword', "__true": 'valueKeyword', "__try": 'keyword',
-			"__typeof": 'valueKeyword', "__var": 'keyword',
-			"__void": 'deniedKeyword', "__while": 'keyword', "__with": 'deniedKeyword',
-			'__"use strict"':  'keyword'},
+	keywords: {
+		"-arguments": RustyTools.Translate.types.valueKeyword,
+		"-break": RustyTools.Translate.types.keyword,
+		"-case": RustyTools.Translate.types.keyword,
+		"-catch": RustyTools.Translate.types.keyword,
+		"-continue": RustyTools.Translate.types.keyword,
+		"-debugger": RustyTools.Translate.types.keyword,
+		"-default": RustyTools.Translate.types.keyword,
+		"-delete": RustyTools.Translate.types.keyword,
+		"-do": RustyTools.Translate.types.keyword,
+		"-else": RustyTools.Translate.types.keyword,
+		"-false": RustyTools.Translate.types.valueKeyword,
+		"-finally": RustyTools.Translate.types.keyword,
+		"-for": RustyTools.Translate.types.keyword,
+		"-function": RustyTools.Translate.types.functionKeyword,
+		"-if": RustyTools.Translate.types.keyword,
+		"-in": RustyTools.Translate.types.keyword,
+		"-instanceof": RustyTools.Translate.types.suffixKeyword,
+		"-new": RustyTools.Translate.types.prefixKeyword,
+		"-return": RustyTools.Translate.types.prefixKeyword,
+		"-switch": RustyTools.Translate.types.keyword,
+		"-this": RustyTools.Translate.types.valueKeyword,
+		"-throw": RustyTools.Translate.types.prefixKeyword,
+		"-true": RustyTools.Translate.types.valueKeyword,
+		"-try": RustyTools.Translate.types.keyword,
+		"-typeof": RustyTools.Translate.types.suffixKeyword,
+		"-var": RustyTools.Translate.types.keyword,
+		"-void": RustyTools.Translate.types.disallowedKeyword,
+		"-while": RustyTools.Translate.types.keyword,
+		"-with": RustyTools.Translate.types.disallowedKeyword,
+		'-"use strict"':  RustyTools.Translate.types.keyword,
+		"-'use strict'":  RustyTools.Translate.types.keyword
+	},
 
 	punctuation: [
-		'+', '-',		// Ick + and _ can be binary or unary dependsind on context.
-		',', '.', // Special punctuation
-		':', // Special punctuation goofy but ? ... : works as a unary postifx ? that allows the binary :
-		';' // Statement end
+		// Ick + and - can be binary or unary depending on context.
+		{op: '+', types: RustyTools.Translate.types.binaryOrUnary},
+		{op: '-', types: RustyTools.Translate.types.binaryOrUnary},
+
+		// Unary
+		{op: '++', types: RustyTools.Translate.types.unary},
+		{op: '--', types: RustyTools.Translate.types.unary},
+		{op: '!', types: RustyTools.Translate.types.unaryPrefix},
+
+		//	Bitwise
+		{op: '~', types: RustyTools.Translate.types.unaryPrefix},
+
+		// Binary
+		// 	Arithmetic
+		{op: '*', types: RustyTools.Translate.types.binary},
+		{op: '/', types: RustyTools.Translate.types.binary},
+		{op: '%', types: RustyTools.Translate.types.binary},
+
+		//	Comparison
+		{op: '===', types: RustyTools.Translate.types.binary},
+		{op: '!==', types: RustyTools.Translate.types.binary},
+		{op: '==', types: RustyTools.Translate.types.binary},
+		{op: '!=', types: RustyTools.Translate.types.binary},
+		{op: '>=', types: RustyTools.Translate.types.binary},
+		{op: '>', types: RustyTools.Translate.types.binary},
+		{op: '<=', types: RustyTools.Translate.types.binary},
+		{op: '<', types: RustyTools.Translate.types.binary},
+
+		//	Logical
+		{op: '&&', types: RustyTools.Translate.types.binary},
+		{op: '||', types: RustyTools.Translate.types.binary},
+
+		//	Bitwise
+		{op: '&', types: RustyTools.Translate.types.binary},
+		{op: '|', types: RustyTools.Translate.types.binary},
+		{op: '^', types: RustyTools.Translate.types.binary},
+		{op: '<<', types: RustyTools.Translate.types.binary},
+		{op: '>>>', types: RustyTools.Translate.types.binary},
+		{op: '>>', types: RustyTools.Translate.types.binary},
+
+		// Special
+		{op: ',', types: RustyTools.Translate.types.separator,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '.', types: RustyTools.Translate.types.memberAccess,
+				check: RustyTools.Translate.check.ifAllowed},
+
+		{op: '?', types: RustyTools.Translate.types.conditional,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: ':', types: RustyTools.Translate.types.colon,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: ';', types: RustyTools.Translate.types.end,
+				check: RustyTools.Translate.check.ifAllowed},
+
+
+		// Assignment
+		{op: '=', types: RustyTools.Translate.types.assignment,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '*=', types: RustyTools.Translate.types.alteration,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '/=', types: RustyTools.Translate.types.alteration,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '%=', types: RustyTools.Translate.types.alteration,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '+=', types: RustyTools.Translate.types.alteration,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '-=', types: RustyTools.Translate.types.alteration,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '<<=', types: RustyTools.Translate.types.alteration,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '>>>=', types: RustyTools.Translate.types.alteration,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '>>=', types: RustyTools.Translate.types.alteration,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '&=', types: RustyTools.Translate.types.alteration,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '^=', types: RustyTools.Translate.types.alteration,
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '|=', types: RustyTools.Translate.types.alteration,
+				check: RustyTools.Translate.check.ifAllowed},
+
+		// Grouping
+		{op: '{', types: RustyTools.Translate.types.groupStart, end: '}',
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '(', types: RustyTools.Translate.types.groupStart, end: ')',
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: '}', types: RustyTools.Translate.types.groupEnd,
+				check: RustyTools.Translate.check.ifGroupMatched},
+		{op: ')', types: RustyTools.Translate.types.groupEnd,
+				check: RustyTools.Translate.check.ifGroupMatched},
+		// Grouping - array
+		{op: '[', types: RustyTools.Translate.types.arrayStart, end: ']',
+				check: RustyTools.Translate.check.ifAllowed},
+		{op: ']', types: RustyTools.Translate.types.arrayEnd, start: '[',
+				check: RustyTools.Translate.check.ifGroupMatched},
 	],
 
-	unaryOperators: [
-		'++', '--',			// Arithmetic punctuation
-		'!',	// Logical punctuation
-		'?' // Special punctuation goofy but ? ... : works as a unary postifx ? that allows the binary :
-	],
-
-	binaryOperators: [
-		'*', '/', '%',	// Arithmetic punctuation
-		'===', '!==', '==', '!=', '>=', '>', '<=', '<',	// Comparison punctuation
-		'&&', '||', 	// Logical punctuation
-		'&', '|', '^', '~', '<<', '>>>', '>>', //	Bitwise punctuation
-	],
-
-	assignmentOperators: [
-		'*=', '/=', '%=', '+=', '-=', '<<=', '>>=', '>>>=', '&=', '^=', '|=', '='	// Assignment punctuation
-	],
-
-	groupSymbols: ['{', '}', '(', ')', '[', ']'],	// Matching open and close tags.
-
-	lValueError: 'The <#getSubTypeOrType/>  "<#str/>" is not allowed in the var or function declaration.',
-	rValueError: 'The <#getSubTypeOrType/>  "<#str/>" is not allowed  where a value is required.',
+	lValueError: 'The <#getActiveType/>  "<#str/>" is not allowed in the var or function declaration.',
+	rValueError: 'The <#getActiveType/>  "<#str/>" is not allowed  where a value is required.',
 
 	// Start in the general statement, not in a block.
-	stateManager: new JavaScriptStateManager(javaScriptStates, 'statement'),
+	stateManager: new RustyTools.Translate.StateManager(javaScriptStates, 'statement'),
 
 	statementResetAllowed: function(str, token) {
 		"use strict";
@@ -172,16 +479,16 @@ var javaScriptSyntaxCheck = {
 			Object.getOwnPropertyNames(self).forEach(function(value) {
 				// Make a hash of all the top level symbols! Prefix with "__" so that
 				// symbold do not collide with Object.prototype properties.
-				symbolTable["__" + value] = 'global';
+				symbolTable["-" + value] = '-global';
 			});
-			symbolTable['__self'] = 'global';
+			symbolTable['-self'] = '-global';
 		} catch (e) {
 			// Unable to use getOwnPropertyNames - try for ... in.  It will probably
 			// be incomplete :-(
 			for (var i in self) {
 				// Make a hash of all the top level symbols! Prefix with "__" so that
 				// symbold do not collide with Object.prototype properties.
-				symbolTable["__" + i]  = 'global';
+				symbolTable["-" + i]  = '-global';
 			}
 		}
 
@@ -190,21 +497,25 @@ var javaScriptSyntaxCheck = {
 
 	makeTranslator: function() {
 		"use strict";
-		return new RustyTools.Translate(this.punctuation, this.unaryOperators,
-				this.binaryOperators, this.assignmentOperators, this.groupSymbols,
-				[// comments
-				'comment',  new RustyTools.Translate.LiteralToken({prefix: "/\\*", suffix: "\\*/"}),
-				'comment',  new RustyTools.Translate.LiteralToken()
-				], [// "use strict" is a special key word, it would notmally match as a string token.
-				'symbol', new RustyTools.Translate.RegExpToken('("use strict")'),
-				'string', new RustyTools.Translate.LiteralToken({prefix: "'", escape: '\\\\', suffix: "'"}),
-				'string', new RustyTools.Translate.LiteralToken({prefix: '"', escape: '\\\\', suffix: '"'}),
-				'number', new RustyTools.Translate.NumberToken({decimal: '\\.', exp: '[eE]'}),
-				'number', new RustyTools.Translate.NumberToken({prefix: '0', numerals: '[0-7]'}),
-				'number', new RustyTools.Translate.NumberToken({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}),
-				'number', new RustyTools.Translate.NumberToken(),
-				'regExp', new RustyTools.Translate.LiteralToken({prefix: '/', escape: '\\\\', suffix: '/'}),
-				'symbol', new RustyTools.Translate.SymbolToken()]);
+		return new RustyTools.Translate(this.punctuation,
+				// comments
+				new RustyTools.Translate.LiteralToken({prefix: "/\\*", suffix: "\\*/"}),
+				new RustyTools.Translate.LiteralToken(),
+				// "use strict" is a special key word, it would notmally match as a string token.
+				new RustyTools.Translate.RegExpToken('("use strict")', RustyTools.Translate.types.keyword),
+				new RustyTools.Translate.RegExpToken("('use strict')", RustyTools.Translate.types.keyword),
+				new RustyTools.Translate.LiteralToken({prefix: "'", escape: '\\\\',
+						suffix: "'", types: RustyTools.Translate.types.string}),
+				new RustyTools.Translate.LiteralToken({prefix: '"', escape: '\\\\',
+						suffix: '"', types: RustyTools.Translate.types.string}),
+				// In javascript there is just one number type
+				new RustyTools.Translate.NumberToken({decimal: '\\.', exp: '[eE]', types: '-number'}),
+				new RustyTools.Translate.NumberToken({prefix: '0', numerals: '[0-7]', types: '-number'}),
+				new RustyTools.Translate.NumberToken({prefix: '0[xX]', numerals: '[0-9A-Fa-f]', types: '-number'}),
+				new RustyTools.Translate.NumberToken({types: '-number'}),
+				new RustyTools.Translate.LiteralToken({prefix: '/', escape: '\\\\',
+						suffix: '/', types: RustyTools.Translate.types.regExp}),
+				new RustyTools.Translate.SymbolToken());
 	},
 
 	// Token handling
@@ -215,381 +526,235 @@ var javaScriptSyntaxCheck = {
 
 	end: function(context) {
 		"use strict";
-		return context["tokens"];
+		return context.tokens;
 	},
 
-	anyToken: function(context, str, token, stateManager) {
+	/**
+	 * Javascript only scopes for each function, so the test for in a function is
+	 * just a test to see if the RustyTools.Translate.StateManage is wrapped.
+	 */
+	isInFunction: function(symbolTable) {
 		"use strict";
-		switch (stateManager.getOptions()) {
-			case RustyTools.Translate.varDef:
-				if (token.isTestable && 'symbol' !== token.type) {
-					// All testable non-symbol tokens are errors where a var declaration is needed.
-					token.setError(RustyTools.Str.multiReplace(token,
-							'The <#getSubTypeOrType/> token: "<#str/> is not ' +
-							'allowed in a var or function declaration.'));
-				}
-				break;
-			// Many kinds of tokens can be lValues!
+		return symbolTable.rustyToolsIsWrapped();
+	},
+
+	tryNext: function(current, types) {
+		"use strict";
+		var next;
+		if ('string' !== typeof types) {
+			var index = types.indexOf(RustyTools.Translate.types.unaryPrefix) + 1;
+			if (index < types.length) {
+				next = this[types[index]];
+			}
+		}
+
+		return next;
+	},
+
+	adjustKeyword: function(token) {
+		"use strict";
+		var match = this.keywords['-' + token.str];
+		if (match) {
+			token.types = match;
+			if ('string' !== typeof match) {
+				token.activeType = match[1];
+			}
 		}
 	},
 
+	isValue: function(token, inFrontOfToken) {
+		"use strict";
+		if (token.types === RustyTools.Translate.types.symbol) this.adjustKeyword(token);
+
+		var isValue = token.types === RustyTools.Translate.types.symbol;
+		if (!isValue) {
+			if ('string' !== typeof token.types) {
+				isValue = (-1 !== token.types.indexOf("-value") ||
+				-1 !== token.types.indexOf("-variable") ||
+				-1 !== token.types.indexOf("-function")) &&
+				-1 === token.types.indexOf("-disallowed");
+			}
+			// Allow the start of end of an expression, or the end of a function.
+			if (!isValue) isValue = (inFrontOfToken) ? '(' : ')' === token.str;
+
+			// A closing ] is also a value.
+			if (!isValue && !inFrontOfToken) isValue = ']' === token.str;
+		}
+		return isValue;
+	},
+
+	isUnaryOperator: function(token) {
+		return !token.error && ("-unaryPrefix" === token.activeType ||
+				"-unarySuffix" === token.activeType);
+	},
+
+	handleBinaryOperator: function(token, stateManager) {
+		if (!token.error && ("-binary" === token.activeType)) {
+			stateManager.advance().push("needsValue");
+			return true;
+		}
+		return false;
+	},
+
 	// Invalid token - just make an error message.
-	__invalid: function(context, str, token) {
+	"-invalid": function(context, str, token) {
 		"use strict";
 		token.setError('Unknowm token: "' + str + '"');
 		return;
 	},
 
-	// Line break does not need to convet.
-	// Whitespace does not need to convert.
-	// Comment does not need to convert.
-
-	// __punctuation is handled in individual token handlers.
-	'__+': function(context, str, token, stateManager, symbolTable,
-			previousToken, nextToken) {
-		"use strict";
-		var options = stateManager.getOptions();
-		if (options === RustyTools.Translate.varDef ||
-				options === RustyTools.Translate.hasVar) {
-			token.setError('The operator "+" is not allowed in a var or function declaration.');
-		} else if (previousToken && previousToken.needTwoValues(nextToken, true)) {
-			// A valid binary +
-			token.clearError();
-			token.subType = 'binary';
-			stateManager.push('needsValue', token);
-		} else if (nextToken && nextToken.possibleValue()) {
-			// A valid unary +  (Note: does not apply to strings.)
-			token.clearError();
-			token.subType = 'unary';
-			stateManager.push('needsValue', token);
-		} else {
-			token.setError('Token "+" is not allowed in this context.')
-		}
-	},
-
-	'__-': function(context, str, token, stateManager, symbolTable,
-			previousToken, nextToken) {
-		"use strict";
-		// Unlike the  + there is no string -
-		var options = stateManager.getOptions();
-		if (options === RustyTools.Translate.varDef ||
-				options === RustyTools.Translate.hasVar) {
-			token.setError('The operator "+" is not allowed in a var or function declaration.');
-		} else if (previousToken && previousToken.needTwoValues(nextToken)) {
-			// A valid binary -
-			token.clearError();
-			token.subType = 'binary';
-			stateManager.push('needsValue', token);
-		} else if (nextToken && nextToken.possibleValue()) {
-			// A valid unary -  (Note: does not apply to strings.)
-			token.clearError();
-			token.subType = 'unary';
-			stateManager.push('needsValue', token);
-		} else {
-			token.setError('Token "-" is not allowed in this context.')
-		}
-	},
-
-	'__.': function(context, str, token, stateManager, symbolTable, previousToken,
-			nextToken) {
-		"use strict";
-		// .  - Access a member.
-		if (previousToken && 'symbol' === previousToken.type) {
-			// The . was used for member access!
-			token.clearError();
-			if (nextToken) nextToken.subType = 'member';
-		}
-	},
-
-	'__,': function(context, str, token, stateManager, symbolTable, nextToken) {
+	"-unarySuffix": function(context, str, token, stateManager, symbolTable,
+			previousToken) {
 		"use strict";
 
-		// Treat a comma before the close of a block as an error.
-		var commaAtEndOfBlock = 'block' === nextToken.type &&
-				// An even position in groupSymbols is a closer.
-				(1 & this.groupSymbols.indexOf(nextToken.str));
-
-		if (commaAtEndOfBlock) token.setError('Do not use "," at the end of a block.');
-
-		return;
-	},
-
-	'__:': function(context, str, token, stateManager) {
-		"use strict";
-		if (!stateManager.current.canBeJSON) {
-			if (!stateManager.isOneOf('jsonSep', 'caseHasValue')) {
-				token.setError('Token ":" is not allowed in this context.');
-			}
-		} else {
-			stateManager.jump('jsonStatement');
-		}
-
-		return;
-	},
-
-	'__;': function(context, str, token, stateManager) {
-		"use strict";
-		var state = (stateManager.current) ? stateManager.current.state : {};
-		if ((!state.endIf || -1 === state.endIf.indexOf[str]) &&
-				(!state.restartIf || -1 === state.restartIf.indexOf[str]) &&
-				(!state.popIf || -1 === state.popIf.indexOf[str])) {
-			token.setError('The statement cannot end here.');
-		}
-
-		return;
-	},
-
-
-	'__unary': function(context, str, token, stateManager, symbolTable,
-			previousToken, nextToken) {
-		"use strict";
-		// Most unarys can only be prefix operators!  ++ and __ must override.
-		var options = stateManager.getOptions();
-		if (options === RustyTools.Translate.varDef ||
-				options === RustyTools.Translate.hasVar) {
-			token.setError('The unary operator "' + str +
-					'" is not allowed in a var or function declaration.');
-		} else if (!nextToken.possibleValue()) {
-			token.setError('Can not perfrom the operation "' + str + '" on "' +
-				(nextToken) ? nextToken.str : nextToken + '".')
-		}
-	},
-
-	'__++': function(context, str, token, stateManager, symbolTable,
-			previousToken, nextToken) {
-		"use strict";
-		var options = stateManager.getOptions();
-		if (options === RustyTools.Translate.varDef ||
-				options === RustyTools.Translate.hasVar) {
-			token.setError('The unary operator "' + str +
-					'" is not allowed in a var or function declaration.');
-		} else if (!previousToken || !previousToken.needOneValue(nextToken)) {
-			token.setError('Cannot perform the operation "' + (previousToken) ?
-					previousToken.str : previousToken + str + '" or "' + str +
-					(nextToken) ? nextToken.str : nextToken + '".');
-		}
-	},
-
-	'__--': this['__++'],
-
-	'__?': function(context, str, token, stateManager, symbolTable, previousToken) {
-		"use strict";
-		var options = stateManager.getOptions();
-		if (options === RustyTools.Translate.varDef ||
-				options === RustyTools.Translate.hasVar) {
-			token.setError('The conditional operator "' + str +
-					'" is not allowed in a var or function declaration.');
-		} else if (previousToken && ')' === previousToken.str) {
-			// A valid ?
-			token.clearError();
-			token.subType = 'conditional';
-			stateManager.advance();	// The ? has been handled.
-			stateManager.push('condNeedsFirst', token);
-		} else {
-			token.setError('Token "-" is not allowed in this context.')
-		}
-	},
-
-	'__binary': function(context, str, token, stateManager, symbolTable,
-			previousToken, nextToken) {
-		"use strict";
-		var options = stateManager.getOptions();
-		if (options === RustyTools.Translate.varDef ||
-				options === RustyTools.Translate.hasVar) {
-			token.setError('The conditional operator "' + str +
-					'" is not allowed in a var or function declaration.');
-		} else if (previousToken && previousToken.needTwoValues(nextToken)) {
-			token.clearError();
-			stateManager.push('needsValue', token);
-		} else {
-			token.setError('Cannot perform the operation "' + (previousToken) ?
-					previousToken.str : previousToken + ' ' + str + ' ' +
-					(nextToken) ? nextToken.str : nextToken + '".');
-		}
-	},
-
-	__assignment: function(context, str, token, stateManager) {
-		"use strict";
-		// assignment is allowes right after 'varDefined'
-		var options = stateManager.getOptions();
-		if (options !== RustyTools.Translate.varDef &&
-				(options === RustyTools.Translate.hasVar ||
-				token.subtype === 'variableMatched')) {
-			stateManager.push('needsValue', token);
-		} else {
-			token.setError('The assignment "' + str + '" is not allowed in this context.');
-		}
-		return;
-	},
-
-	__grouping: function(context, str, token, stateManager) {
-		"use strict";
-
-		if (token.groupingCount < 0) {
-			token.setError('Missing opener for "' + str + '".');
-		} else if (stateManager.isOneOf('varStatement', 'varDefined')) {
-			token.setError('Token: "' + str + '" is not allowed where a varaible name is needed.');
-		} else {
-			stateManager.blockAllowed(token);
-		}
-
-		return;
-	},
-
-	'__(': function(context, str, token, stateManager) {
-		"use strict";
-		// A function may have no name, just go to functionBeforeArg
-		if (stateManager.isOneOf('functionDef')) {
-			token.clearError();
-			stateManager.jump('functionBeforeArg');
-			stateManager.markState();	// Count this as the origional state.
-		}
-
-		return;
-	},
-
-	'__{': function(context, str, token, stateManager, symbolTable) {
-		"use strict";
-		if (stateManager.isOneOf('functionBeforeBlock')) {
-			symbolTable.isInFunction = true;
-		}
-
-		return;
-	},
-
-	'__[': function(context, str, token, stateManager, symbolTable, previousToken) {
-		"use strict";
-
-		// Allowed if "[" follows a variable or function call.
-		// ')' === token.str is not exaustive - it will let some non-array
-		// expressions through.
-		if (previousToken && ('symbol' === previousToken.type || ')' ===
-				previousToken.str)) {
-			if (token.error)  token.clearError();
-			stateManager.push('arg', token);
-		}
-		return;
-	},
-
-	'__]': function(context, str, token) {
-		"use strict";
-		return;
-	},
-
-	__number: function(context, str, token, stateManager) {
-		"use strict";
-
-		// Numbers can serve as an rvalue, but not an lvalue
-		if (!token.error) stateManager.foundValue(token, false, true,
-				this.lValueError, this.rValueError);
-
-		return;
-	},
-
-	__symbol: function(context, str, token, stateManager, symbolTable,
-			previousToken, nextToken) {
-		"use strict";
-		if (!token.error) {
-			// Cramming arbitrary names into an object can hide Object.prototype
-			// methods. (E.g. hiding hasOwnProperty will crash Translator!)
-			// Prefix with '__'
-			var prefixedStr = '__' + str;
-
-			if (nextToken && ':' === nextToken.str) {
-				// If we are in an object definition this means the symbol is a member
-				token.subType = 'member';
-				stateManager.jump('jsonName');
+		if (this.isValue(previousToken, true)) {
+			// This token is OK.  Set the subtype.
+			if (token.types !== RustyTools.Translate.types.unarySuffix &&
+					token.types[0] !== RustyTools.Translate.types.unarySuffix) {
+				token.activeType = RustyTools.Translate.types.unarySuffix;
 			}
 
-			// Member can also be set by look-ahead on the '.'
-			if ('member' !== token.subType)  {
-				// Check for states the will cause the addition of new
-				// items to the symbol table.
-				var stateName = (stateManager.state) ? stateManager.state.name : '';
-				if (stateManager.isOneOf('arg')) {
-						symbolTable[prefixedStr] = 'argument';
-				} else if (stateManager.isOneOf('functionDef')) {
-					stateManager.advance();
-					symbolTable[prefixedStr] = 'function';
-				} else if (stateManager.isOneOf('varStatement')) {
-					stateManager.advance();
-					symbolTable[prefixedStr] = (symbolTable.isInFunction) ? 'variable' : 'global';
-				}
-				// Color the tokens
-				token.subType = symbolTable[prefixedStr] || 'unknown';
+			// This symbol may have had other types or options
+			token.check = RustyTools.Translate.check.unaryOperator;
+		} else {
+			var callNext = this.tryNext("-unarySuffix", this.types);
+			if (callNext) {
+				callNext.apply(this, Array.prototype.slice(arguments, 0));
+			} else {
+				token.setError('"' + str + '" is not allowed here.');
+			}
+		}
+		return;
+	},
 
-				if (symbolTable[prefixedStr]) {
-					// Keywords that can be rvalues must be handled in their own handler
-					if ('keyword' !== token.subType) {
-						// 'valueKeyword' and 'constant' cannot be lValues.
-						stateManager.foundValue(token, -1 === ['valueKeyword', 'constant'].
-								indexOf(token.subtype), true, this.lValueError, this.rValueError);
-					}
-				} else {
-					token.setError('When in strict mode the variable "' + str +
-							'" must be declared before it is used.');
-				}
+	"-unaryPrefix": function(context, str, token, stateManager, symbolTable,
+			previousToken, nextToken) {
+		"use strict";
+		if (this.isValue(nextToken, false)) {
+			// This token is OK.  Set the subtype.
+			if (token.types !== RustyTools.Translate.types.unaryPrefix &&
+					token.types[0] !== RustyTools.Translate.types.unaryPrefix) {
+				token.activeType = RustyTools.Translate.types.unaryPrefix;
+			}
+
+			// This symbol may have had other types or options
+			token.check = RustyTools.Translate.check.unaryOperator;
+		} else {
+			var callNext = this.tryNext("-unaryPrefix", this.types);
+			if (callNext) {
+				callNext.apply(this, Array.prototype.slice(arguments, 0));
+			} else {
+				token.setError('"' + str + '" is not allowed here.');
+			}
+		}
+		return;
+	},
+
+	"-binary": function(context, str, token, stateManager, symbolTable,
+			previousToken, nextToken) {
+		"use strict";
+		if (this.isValue(previousToken, false) && this.isValue(nextToken, false)) {
+			// This token is OK.  Set the subtype.
+			if (stateManager.getOptions() === RustyTools.Translate.hasNewVar) {
+				token.setError('Can not use the binary operator "' + str +
+						'" on a newly defined variable.');
+			} else if (token.types !== RustyTools.Translate.types.binary) {
+				token.activeType = RustyTools.Translate.types.binary;
+			}
+
+			// This symbol may have had other types or options
+			token.check = RustyTools.Translate.check.binaryOperator;
+		} else {
+			var callNext = this.tryNext("-binary", this.types);
+			if (callNext) {
+				callNext.apply(this, Array.prototype.slice(arguments, 0));
+			} else {
+				token.setError('"' + str + '" is not allowed here.');
+			}
+		}
+		return;
+	},
+
+	"-memberAccess": function(context, str, token, stateManager, symbolTable,
+			previousToken) {
+		"use strict";
+		if (!this.isValue(previousToken, false)) {
+			var name = (previousToken) ? previousToken.str : 'NO TOKEN';
+			token.setError('Unable to access a member of "' + name + '".');
+		}
+	},
+
+	// "-assignment" : function(context, str, token, stateManager) {
+	// 	"use strict";
+	// 	var options = stateManager.getOptions();
+	// 	if (RustyTools.Translate.hasVar !== options) {
+	// 		token.setError('The assignment "' + str + '" is not allowed here.');
+	// 	}
+	// },
+
+	// "-alteration" : function(context, str, token, stateManager) {
+	// 	"use strict";
+	// 	var options = stateManager.getOptions();
+	// 	if (RustyTools.Translate.hasVar !== options ||
+	// 			"hasVar" !== stateManager.getStateName()) {
+	// 		token.setError('The assignment "' + str + '" is not allowed here.');
+	// 	}
+	// },
+
+	"-symbol": function(context, str, token, stateManager, symbolTable, previousToken, nextToken) {
+		"use strict";
+		var prefixedStr = '-' + str, keywordTypes;
+
+		// Check members and JSON first.  They do not conflict with keywords, or variables.
+		if (previousToken && '{' === previousToken.str && nextToken &&
+				':' === nextToken.str) {
+			// This is the start of objectNotation
+			if ('jsonName' !== stateManager.getStateName()) {
+				stateManager.jump('jsonName').markState();
 			}
 		}
 
-		return;
-	},
-
-	"__arguments": function(context, str, token, stateManager, symbolTable) {
-		"use strict";
-
-		// arguments can be a rValue.
-		token.clearError();
-
-		// arguments is a special if it is inside a function.  Otherwise it is
-		// an error.
-		if (symbolTable.isInFunction) {
-			// Inside the function body
-			token.subType = "valueKeyword";
-			// Can't write to arguments.
-			stateManager.foundValue(token, false, true,
-					this.lValueError, this.rValueError);
+		if ('jsonName' === stateManager.getStateName()) {
+			token.activeType = '-menber';
+		} else if (previousToken && '.' === previousToken.str) {
+			token.activeType = '-menber';
+		} else if ((keywordTypes = this.keywords[prefixedStr])) {
+			token.setTypes(keywordTypes);
+		} else if (RustyTools.Translate.varDef === stateManager.getOptions()) {
+			// A variable definition - add into the symbol table.
+			symbolTable[prefixedStr] = token.activeType =
+					(this.isInFunction(symbolTable)) ? '-variable' : '-global';
+		} else if (RustyTools.Translate.paramDef === stateManager.getOptions()) {
+			// A variable definition - add into the symbol table.
+			symbolTable[prefixedStr] = token.activeType = '-parameter';
 		} else {
-			// Not allowed here!
-			token.setError('The token: "' + str +
-					'" is only defined inside a fuction.');
+			// Read the sub-type from the symbol table.  Error if there is no sub-type.
+			if (!(token.activeType = symbolTable[prefixedStr])) {
+				token.setError('When in strict mode the variable "' + str +
+						'" must be declared before it is used.');
+				token.activeType = '';
+			}
+		}
+
+		// A variable in RustyTools.Translate.ganeralStatement pushes to "hasVar"
+		if (!token.err && RustyTools.Translate.ganeralStatement ===
+				stateManager.getOptions() &&
+				// Make sure the symbol is a variable, global, or value keyword.
+				-1 !== ['-global', '-parameter', '-value', '-variable'].indexOf(token.activeType)) {
+			stateManager.push("hasVar");
 		}
 	},
 
-	"__for": function(context, str, token, stateManager) {
+	"-string": function(context, str, token, stateManager, symbolTable, previousToken, nextToken) {
 		"use strict";
-		if (!token.err)	stateManager.push('forDefinition', token);
-	},
 
-	"__function": function(context, str, token, stateManager) {
-		"use strict";
-		if (!token.err)	{
-			// Function can serve as an rvalue, but not an lvalue
-			stateManager.foundValue(token, false, true,
-					this.lValueError, this.rValueError);
-			stateManager.push('functionDef', token);
+		// A string can be an object notation name
+		if (previousToken && '{' === previousToken.str && nextToken &&
+				':' === nextToken.str) {
+			// This is the start of objectNotation
+			if ('jsonName' !== stateManager.getStateName()) {
+				stateManager.jump('jsonName').markState();
+			}
 		}
-	},
-
-	"__var": function(context, str, token, stateManager) {
-		"use strict";
-		if (!token.err) stateManager.push('varStatement', token);
-	},
-
-	"__switch": function(context, str, token, stateManager) {
-		"use strict";
-		if (!token.err)	stateManager.push('swtichNeedsArg', token);
-	},
-
-	"__string": function(context, str, token, stateManager, symbolTable, nextToken) {
-		"use strict";
-		if (':' === nextToken.str && stateManager.current.canBeJSON) {
-			// If we are in an object definition this means the symbol is a member
-			token.subType = 'member';
-			stateManager.jump('jsonName');
-		}
-
-		// Strings can serve as an rvalue, but not an lvalue
-		stateManager.foundValue(token, false, true, this.lValueError, this.rValueError);
 	}
 };

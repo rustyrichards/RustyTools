@@ -8,6 +8,11 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 		'editControl.__test \n' +
 		'editControl.tokenizeForEditor',
 		function(t,r) {
+			// I wrote this test first, but really to test the parsing, there needs
+			// to be an exaustive test for each state.
+
+			// I will keep this test for the parseForEditor, and buildSpliceDifference
+			// tests, but the exaustive state tests will be added below.
 			source = '/* Comment on line one. */\n' +
 				'// Line comment on line two.\n' +
 				'function testFn(a, b) {\n' +
@@ -25,16 +30,21 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 				if (token.error) result.push(token);
 				return result;
 			}, errors);
+			tokens.forEach(function(token) {
+				if (token.isTestable) {
+					r.logObjects(token.str + '\t\t' + ((token.state) ? (token.state.id || 'NONE') : 'UNDEFINED') + '\t\t' + token.getCombindedClass() + '\n');
+				}
+			})
 			r.same(6, errors.length).same(';', errors[0].str).same('=', errors[1].str).
 					same('+', errors[2].str).same('y', errors[3].str).
 					same('qq', errors[4].str).same('}', errors[5].str);
 		},
 
-		'editControl.tokenizeForEditor',
+		'editControl.parseForEditor',
 		function(t,r) {
 			outStr = editControl.parseForEditor(tokens);
 			r.logObjects(outStr);
-			r.same(source, RustyTools.Str.markupToPlainText(outStr));
+			r.same(source, RustyTools.Str.markupToPlainText(outStr, true));
 		},
 
 		'editControl.buildSpliceDifference',
@@ -48,10 +58,10 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 					editControl.revertTokens(tokens2, revertSplice));
 			// Check that the plain text of the outStr, and outStr2 are different.
 			// Check that the revertTokens restores the old plain text.
-			r.different(RustyTools.Str.markupToPlainText(outStr2),
-				RustyTools.Str.markupToPlainText(outStr)).
-				same(RustyTools.Str.markupToPlainText(reverted),
-				RustyTools.Str.markupToPlainText(outStr));
+			r.different(RustyTools.Str.markupToPlainText(outStr2, true),
+				RustyTools.Str.markupToPlainText(outStr, true)).
+				same(RustyTools.Str.markupToPlainText(reverted, true),
+				RustyTools.Str.markupToPlainText(outStr, true));
 		}
 	]);
 };

@@ -241,7 +241,7 @@ var editControl = {
 		var text = '';
 		if (event.clipboardData) {
 			if (/text\/html/.test(event.clipboardData.types)) {
-				text = RustyTools.Str.markupToPlainText(event.clipboardData.getData('text/html'));
+				text = RustyTools.Str.markupToPlainText(event.clipboardData.getData('text/html'), true);
 			}
 			else if (/text\/plain/.test(event.clipboardData.types)) {
 				text = event.clipboardData.getData('text/plain');
@@ -261,17 +261,17 @@ var editControl = {
 				case 'whitespace':
 					result +=  RustyTools.Str.mulitReplaceCleanup(
 							RustyTools.Str.multiReplace('<span id="token-<#index/>" ' +
-									'class="<#subType/>"><#str/></span>', token, 'pre'));
+									'class="<#getCombindedClass/>"><#str/></span>', token, 'pre'));
 					break;
 				case 'grouping':
 					var groupingCount = token.groupingCount;
 					if (0 < groupingCount) groupingCount &= 7;
-					token.subType = 'group' + groupingCount;
+					token.activeType = 'group' + groupingCount;
 					// Fall trhough wanted.
 				default:
 					result += RustyTools.Str.mulitReplaceCleanup(
 							RustyTools.Str.multiReplace('<span id="token-<#index/>" ' +
-							'class="<#getCombinedType/>" title="<#errorMessage/>">' +
+							'class="<#getCombindedClass/>" title="<#errorMessage/>">' +
 							'<#str/></span>', token, 'pre'));
 			}
 		}
@@ -294,10 +294,10 @@ var editControl = {
 					// much easier.
 					var newToken = new RustyTools.Translate.Token('whitespace',
 							whitespaceIndex, '', token.line+1, 0);
-					newToken.subType = 'indent';
+					newToken.activeType = 'indent';
 					tokens.splice(index+1, 0, newToken);
 				} else {
-					last.subType = 'indent';
+					last.activeType = 'indent';
 				}
 			}
 			last = token;
@@ -549,10 +549,11 @@ var page = {
 
 		ui.makeComponent(ui.menu, menus, document.getElementById('menu-container'));
 
-		RustyTools.Events.addEventListener('menu-Options', 'click',
-				editControl.options.bind(editControl));
-		RustyTools.Events.addEventListener('menu-Font', 'click',
-				editControl.font.bind(editControl));
+		document.getElementById('menu-Options').addEventListener('click',
+			 events.wrap(editControl.options, editControl));
+
+		document.getElementById('menu-Font').addEventListener('click',
+			 events.wrap(editControl.font, editControl));
 
 		// Run a the test if the paramter &test or &test=[anything other than flase]
 		// is set.

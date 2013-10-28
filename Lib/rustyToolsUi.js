@@ -29,6 +29,7 @@ RustyTools.Ui = {
 		'onmousedown="RustyTools.disallow();"><#1/></div>',
 
 	replace: function(template /* args */) {
+		"use strict";
 		// Match <#id/> or <+id/>
 		var params = Array.prototype.slice.call(arguments, 0);
 		return template.replace(/<(#|\+)([0-9]+)\/>/g,
@@ -46,6 +47,7 @@ RustyTools.Ui = {
 	},
 
 	makeComponent: function(template, replaceObj, opt_hostElement) {
+		"use strict";
 		var str;
 		try {
 			// Call multiReplace and mulitReplaceCleanup to fill in the template.
@@ -65,5 +67,5 @@ RustyTools.Ui = {
 		}
 
 		return (opt_hostElement) ? opt_hostElement : str;
- 	}
+	}
 };

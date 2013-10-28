@@ -28,9 +28,9 @@
 			.search-replace .input-label {width:8ex; display:inline-block;}
 			.search-replace .check-label {width:11ex; display:inline-block;}
 			.search-replace input[type='text'] {
-		    width: -moz-calc(100% - 57ex);
-		    width: -webkit-calc(100% - 57ex);
-		    width: calc(100% - 57ex);
+			 width: -moz-calc(100% - 57ex);
+			 width: -webkit-calc(100% - 57ex);
+			 width: calc(100% - 57ex);
 		  }
 			.search-replace input[type='button'] {width:15ex;}
 			.editframe {position:absolute; top:0; right:0; bottom:0; left:0;
@@ -97,6 +97,7 @@
 		</style>
 		<script src="Lib/rustyTools.js"></script>
 		<script src="Lib/rustyToolsEvents.js"></script>
+		<script>var events = new RustyTools.Events(); /* Need to define the global before events are attached. */</script>
 		<script src="Lib/rustyToolsFn.js"></script>
 		<script src="Lib/rustyToolsStr.js"></script>
 		<script src="Lib/rustyToolsTranslate.js"></script>

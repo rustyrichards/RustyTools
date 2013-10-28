@@ -489,12 +489,16 @@ RustyTools.Str = {
 		return output;
 	},
 
-	markupToPlainText: function(str) {
+	markupToPlainText: function(str, opt_removeContentEditable) {
 		"use strict";
 		var context = this;
 		// Save the src from images.  Put a spave before and after o there will be
 		// a gap if the image is in the middle of text.
-		return str.replace(/<img[^>]*\bsrc=(?:(?:("|')([^\1>]*)\1)|([^\s>]*))>/ig, " $2$3 ").
+		var converted = str;
+		if (opt_removeContentEditable) {
+			converted = converted.replace(/<[^>]*\bcontenteditable="false"[^<]*/g, '');
+		}
+		return converted.replace(/<img[^>]*\bsrc=(?:(?:("|')([^\1>]*)\1)|([^\s>]*))>/ig, " $2$3 ").
 			// Save the href from links, but don't save any # links!
 			replace(/<a[^>]*\bhref=(?:(?:("|')(?!#)([^\1>]*)\1)|((?!"|'|#)[^\s>]*))>/ig, "$2$3 ").
 			// Change <br> to  \n,

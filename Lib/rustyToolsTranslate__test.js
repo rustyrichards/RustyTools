@@ -35,12 +35,12 @@ RustyTools.Translate.Token.__test = function(t, r) {
 			},
 			function(t, r) {
 				// get...Type
-				testableToken.subType = "addition";
+				testableToken.activeType = "addition";
 
-				r.same('symbol addition', testableToken.getCombinedType()).
-						same('addition', testableToken.getSubTypeOrType()).
-						same('strange-comment', untestableToken.getCombinedType()).
-						same('strange-comment', untestableToken.getSubTypeOrType());
+				r.same('symbol addition', testableToken.getCombindedClass()).
+						same('addition', testableToken.getActiveType()).
+						same('strange-comment', untestableToken.getCombindedClass()).
+						same('strange-comment', untestableToken.getActiveType());
 			},
 			function(t, r) {
 				// isSame only the .type and .str matter to isSame.
