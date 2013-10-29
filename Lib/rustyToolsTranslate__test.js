@@ -360,5 +360,5 @@ RustyTools.Translate.LiteralToken.__test = function(t, r) {
 // and  RustyTools.Translate
 //
 // Test these with the syntax/language file.
-// This could make and test a fake gramar, but that doesn't do a lot to help
-// gramar testers.
+// This could make and test a fake grammar, but that doesn't do a lot to help
+// grammar testers.
