@@ -178,26 +178,6 @@ RustyTools.Translate.Token.prototype.replace = function(other) {
 	}
 };
 
-RustyTools.Translate.Token.prototype.possibleValue = function(opt_allowStrings) {
-	'use strict';
-	return (-1 !== ['symbol', 'number'].indexOf(this.activeType) ||
-			(opt_allowStrings && 'string' === this.activeType)) || ')' === this.str ||
-			']' === this.str;
-},
-
-RustyTools.Translate.Token.prototype.needTwoValues = function(afterToken, opt_allowStrings) {
-	'use strict';
-	return this.possibleValue(opt_allowStrings) && afterToken &&
-			afterToken.possibleValue(opt_allowStrings);
-};
-
-RustyTools.Translate.Token.prototype.needOneValue = function(afterToken, opt_allowStrings) {
-	'use strict';
-	return this.possibleValue(opt_allowStrings) || (afterToken &&
-			afterToken.possibleValue(opt_allowStrings));
-};
-
-
 RustyTools.Translate.tokenOrder  = function(a, b) {
 	'use strict';
 	// longest first

@@ -9,18 +9,18 @@ RustyTools.Translate.Token.__test = function(t, r) {
 			"RustyTools.Translate.Token.__test\n" +
 			"Translate.",
 			function(t, r) {
-				untestableToken = new RustyTools.Translate.Token("strange-comment", 99,
-						"--special--",  1/* line */, 10 /* position */,
-						10 /* charPosition */, false /* not testable */);
-				testableToken = new RustyTools.Translate.Token("symbol", 99,
+				untestableToken = new RustyTools.Translate.Token(["-strange-comment",
+						"-immaterial"], 1, 99, "--special--",  1/* line */, 10 /* position */,
+						10 /* charPosition */);
+				testableToken = new RustyTools.Translate.Token("-symbol", 2, 99,
 						"+",  1/* line */, 10 /* position */,
 						10 /* charPosition */,  true /* testable */);
-				r.different(untestableToken.type, testableToken.type).
+				r.different(untestableToken.types, testableToken.types).
 						same(untestableToken.typeNum, testableToken.typeNum).
 						different(untestableToken.str, testableToken.str);
 			},
 			function(t, r) {
-				// Untestable tokens are for whitespace comments.
+				// Untestable tokens are for whitespace and comments.
 				r.not(untestableToken.isTestable).different(untestableToken.isTestable,
 						testableToken.isTestable);
 			},
@@ -35,31 +35,33 @@ RustyTools.Translate.Token.__test = function(t, r) {
 			},
 			function(t, r) {
 				// get...Type
-				testableToken.activeType = "addition";
+				testableToken.activeType = "-addition";
 
 				r.same('symbol addition', testableToken.getCombindedClass()).
-						same('addition', testableToken.getActiveType()).
+						same('-addition', testableToken.getActiveType()).
 						same('strange-comment', untestableToken.getCombindedClass()).
-						same('strange-comment', untestableToken.getActiveType());
+						same('-strange-comment', untestableToken.getActiveType());
 			},
 			function(t, r) {
 				// isSame only the .type and .str matter to isSame.
 				// (Note .error is not counted.)
-				var newToken = new RustyTools.Translate.Token("symbol", 101,
+				var newToken = new RustyTools.Translate.Token("-symbol", 2, 101,
 						"+",  10/* line */, 100 /* position */,
-						1000 /* charPosition */, true /* testable */);
+						1000 /* charPosition */);
 
 				// Same as testableToken different from untestableToken
 				r.is(newToken.isSame(testableToken)).not(newToken.isSame(untestableToken));
 			},
 			function(t, r) {
 				// noReparse and replace.
-				var whiteToken = new RustyTools.Translate.Token("whitespace", 101,
+				var whiteToken = new RustyTools.Translate.Token(["whitespace",
+						"-immaterial"], 1, 101,
 						" ",  10/* line */, 100 /* position */,
-						1000 /* charPosition */, false /* not-testable */);
-				var whiteToken2 = new RustyTools.Translate.Token("comment", 111,
+						1000 /* charPosition */);
+				var whiteToken2 = new RustyTools.Translate.Token(["comment",
+						"-immaterial"], 1, 111,
 						"/* test */",  11/* line */, 121 /* position */,
-						1221 /* charPosition */, false /* not-testable */);
+						1221 /* charPosition */);
 
 				// whiteToken to whiteToken2 - no need to re-parse.
 				// Replace whiteToken with whiteToken2, whiteToken's line does not change
@@ -354,45 +356,9 @@ RustyTools.Translate.LiteralToken.__test = function(t, r) {
 	]);
 };
 
-RustyTools.Translate.__test = function(t, r) {
-	var translate = new RustyTools.Translate(['+', '-', '.', ',', ';',
-			'===', '=='],
-			['++', '--', '~', '!'],	// Unary
-			['*', '--', '/', '%'],	// Binary
-			['=', '+=', '-=','*=', '/='],	// assignment
-			['{', '}', '(', ')', '[', ']'], // grouping
-			['blockComment',  new RustyTools.Translate.LiteralToken({prefix:'/\\*', suffix:'\\*/'}),
-			'comment',  new RustyTools.Translate.LiteralToken()],
-			['float', new RustyTools.Translate.NumberToken({decimal: '\\.', exp: '[eE]'}),
-			'octal', new RustyTools.Translate.NumberToken({prefix: '0', numerals: '[0-7]'}),
-			'hex', new RustyTools.Translate.NumberToken({prefix: '0[xX]', numerals: '[0-9A-Fa-f]'}),
-			'dec', new RustyTools.Translate.NumberToken(),
-			'symbol', new RustyTools.Translate.SymbolToken()]);
-
-	t.test([
-			"RustyTools.Translate.__test\n" +
-			"Translate.extractTokens",
-			function(t, r) {r.same(translate.tokenTypes.length, 32);},
-			function(t, r) {r.different(translate.tokenizer, null);},
-			function(t, r) {
-					var tokens = translate.extractTokens(
-								'/*\n' +
-								'Block comment\n' +
-								'*/\n' +
-								'var x = function(one,two) {\n' +
-								'  y = one;  // Start at one\n' +
-								'  y += two;\n' +
-								'  y += 3.14;\n' +
-								'  y += 6.02e+23;\n' +
-								'  y += 0xabcd;\n' +
-								'  y += 0777;\n' +
-								'  return y;\n' +
-								'};'
-					);
-
-					r.logObjects(JSON.stringify(tokens));
-					r.same(tokens.indexOf(0), -1);
-			}
-
-	]);
-};
+// RustyTools.Translate.__test
+// and  RustyTools.Translate
+//
+// Test these with the syntax/language file.
+// This could make and test a fake gramar, but that doesn't do a lot to help
+// gramar testers.
