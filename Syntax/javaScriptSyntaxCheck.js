@@ -99,7 +99,7 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 			"var": true, "while": true,
 			"-assignment": true, "-alteration": true,
 			"-value": true, "-variable": true, "-global": true,
-			";": true, ",": true
+			"{": true, "(": true, ";": true, ",": true
 		},
 		pushIf: {
 			"-groupStart": "statement",
@@ -108,7 +108,8 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 			"swtich" : "switchDefinition", "try": "tryDefinition",
 			"var": "varStatement", "while": "whileDefinition",
 			"-assignment": "needsValue", "-alteration": "needsValue",
-			"-value": "hasVar", "-variable": "hasVar", "-global": "hasVar"
+			"-value": "hasVar", "-variable": "hasVar", "-global": "hasVar",
+			"{": "statement", "(": "statement"
 		},
 		restartIf: {",": true},
 		popIf: {";": true},
@@ -273,6 +274,13 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	// for statement
 	{id: "forDefinition", allowed: {"(": true}, pushIf: {"(": "inForStatement1"}},
 	{id: "forBeforeBlock", pushIf: {"{": "statement"}, push: "oneStatement"},
+	// If there is a block it will stack
+	null,
+
+	// for statement
+	{id: "doDefinition", call: "oneStatement"},
+	{id: "whileStatement", allowed: {"while": true}},
+	{id: "whileArg", allowed: {"(": true}, pushIf: {"(": "oneArg"}},
 	// If there is a block it will stack
 	null,
 

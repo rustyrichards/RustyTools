@@ -4,6 +4,23 @@
 javaScriptSyntaxCheck.__test = function(t, r) {
 	var tokens, errors, source, outStr;
 
+	function parseTokens(source) {
+		var tokens = editControl.tokenizeForEditor(source);
+		editControl.parseForEditor(tokens);
+
+		return tokens;
+	};
+
+	function getErrorTokens(tokens) {
+		var errors = [];
+		tokens.reduce(function(result, token) {
+				if (token.error) result.push(token);
+				return result;
+			}, errors);
+
+		return errors;
+	};
+
 	t.test([
 		'editControl.__test \n' +
 		'editControl.tokenizeForEditor',
@@ -13,16 +30,17 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 
 			// I will keep this test for the parseForEditor, and buildSpliceDifference
 			// tests, but the exaustive state tests will be added below.
-			source = '/* Comment on line one. */\n' +
-				'// Line comment on line two.\n' +
-				'function testFn(a, b) {\n' +
-				'	var z = a - b;	// OK\n' +
-				'	var z2 = arguments[0] + arguments[1];	// OK\n' +
-				'	var ;	// ";" empty var statement - error at the ";".\n' +
-				'	var = x;	// "=" before rValue\n' +
-				'	var x + y = z;	// "+" before rValue\n' +
-				'	qq = a * b;	// No var in front of q!\n' +
-				'}}	// too many "}"\n';
+			source =
+['				/* Comment on line one. */',
+'				// Line comment on line two.',
+'				function testFn(a, b) {',
+'					var z = a - b;	// OK',
+'					var z2 = arguments[0] + arguments[1];	// OK',
+'					var ;	// \";\" empty var statement - error at the \";\".',
+'					var = x;	// \"=\" before rValue',
+'					var x + y = z;	// \"+\" before rValue',
+'					qq = a * b;	// No var in front of q!',
+'				}}	// too many \"}\";'].join('\n');
 			tokens = editControl.tokenizeForEditor(source);
 			var temp = editControl.parseForEditor(tokens);
 			errors = [];
@@ -62,6 +80,43 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 				RustyTools.Str.markupToPlainText(outStr, true)).
 				same(RustyTools.Str.markupToPlainText(reverted, true),
 				RustyTools.Str.markupToPlainText(outStr, true));
+		},
+
+		'Grammar tests\n' +
+		'statement',
+		function(t,r) {
+			// Valid in a statement, but no real actions.
+			var test =
+['			;;',
+'			;,',
+'			,,'].join('\n');
+			var tokens = parseTokens(test);
+			var errors = getErrorTokens(tokens);
+			r.not(errors.length);
+		},
+		'statement {...}',
+		function(t,r) {
+			// Grouping the extra '}' should be an error.
+			var test =
+'				{ { } { { } } } }';
+			var tokens = parseTokens(test);
+			var counts = tokens.reduce(function(result, token) {
+					if ('{' === token.str || '}' === token.str) result.push(token.groupingCount);
+					return result;
+				}, []);
+			var countsShouldBe = [0, 1, 1, 1, 2, 2, 1, 0, -1];
+			r.same(countsShouldBe, counts).is(tokens[tokens.length-1].error);
+		},
+		'statement do ... while',
+		function(t,r) {
+			// do ... while
+			var test =
+['				do ; while(self);							// OK',
+'				do {} while (self);						// OK',
+'				do {} } while ( self );				// bad'].join('\n');
+			var tokens = parseTokens(test);
+			var errors = getErrorTokens(tokens);
+			r.same('}', errors[0].str).same(-1, errors[0].groupingCount);
 		}
 	]);
 };

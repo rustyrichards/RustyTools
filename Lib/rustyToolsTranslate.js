@@ -39,7 +39,7 @@ RustyTools.Translate = function(punctuation /*, tokenMatches*/ ) {
 	punctuation.forEach(function(element) {
 		if (element.end) {
 			context.groupingOpeners[element.op] = element.end;
-			context.groupingClosers[element.start] = element.op;
+			context.groupingClosers[element.end] = element.op;
 		}
 
 		context.tokenTypes.push(element);
@@ -271,6 +271,8 @@ A state object has the following (all optional) values:
 								false - unwrap the symbol table to exit the scope
 								NOTE: must match the pushIf/push, or popIf/pop.
 
+	call: 			For common sub-components.  When this state is reached immediately
+							push to the given state.
 	bypassIf:		This seems like jumpIf, but it happens before processing the
 							state.  In general the processing is in the given state, but
 							sometimes there are optional parts (like the function name).
@@ -417,11 +419,30 @@ RustyTools.Translate.StateManager.prototype.jump = function(state) {
 
 	this.current.state = this.stateSet.fromIndex(this.current.stateIndex);
 
+	this.handleCall();
+
 	// For chaining.
 	return this;
 };
 
+RustyTools.Translate.StateManager.prototype.handleCall = function() {
+	try {
+		var toCall = this.current.state.call;
+		if (toCall) {
+			this.advance(1, true);
+			this.push(toCall);
+		}
+	} catch (e) {}
+
+	// For chaining.
+	return this
+};
+
+
+
 RustyTools.Translate.StateManager.prototype.reset = function() {
+	this.groupingCounts = {};
+
 	var index = 0;
 	while (!this.stateSet.states[index]) index++;
 	this.current.stateIndex = index;
@@ -439,11 +460,12 @@ RustyTools.Translate.StateManager.prototype.push = function(state, token, opt_cl
 		this.current.endBlock = '';
 	}
 
-	// For chaining.
-	return this;
+	// For handleCall chains.
+	return this.handleCall();
 };
 
-RustyTools.Translate.StateManager.prototype.advance = function(opt_count) {
+RustyTools.Translate.StateManager.prototype.advance = function(opt_count,
+		opt_skipHandleCall) {
 	'use strict';
 	if (opt_count == null) opt_count = 1;
 
@@ -465,7 +487,7 @@ RustyTools.Translate.StateManager.prototype.advance = function(opt_count) {
 
 	if (!this.current.state) this.pop_();
 
-	// For chaining.
+	if (!opt_skipHandleCall) this.handleCall();
 	return this;
 };
 
@@ -482,8 +504,8 @@ RustyTools.Translate.StateManager.prototype.backupToStart_ = function() {
 	// Advance one to find the start state. Return true if the state is found.
 	this.current.state = this.stateSet.states[++this.current.stateIndex];
 
-	// For chaining.
-	return this;
+	// For handleCall chains.
+	return this.handleCall();
 };
 
 RustyTools.Translate.StateManager.prototype.advanceToEnd_ = function() {
@@ -493,8 +515,8 @@ RustyTools.Translate.StateManager.prototype.advanceToEnd_ = function() {
 
 	this.current.state = this.stateSet.states[this.current.stateIndex];
 
-	// For chaining.
-	return this;
+	// For handleCall chains.
+	return this.handleCall();
 };
 
 RustyTools.Translate.StateManager.prototype.pop_ = function(/*token*/) {
@@ -520,8 +542,8 @@ RustyTools.Translate.StateManager.prototype.pop_ = function(/*token*/) {
 	// No need to tansition on the new sate.  The advance before push makes
 	// sure that the popped state is for the next token.
 
-	// For chaining
-	return this;
+	// For handleCall chains.
+	return this.handleCall();
 };
 
 // Find the ID or offset for a given token or type
@@ -670,6 +692,7 @@ RustyTools.Translate.StateManager.prototype.transitionOnToken = function(
 			if (endBlockPop) {
 					this.pop_(token);
 			} else if (this.current.state) {
+				var nextStateId;
 				// State transitions do not apply to errored tokens.
 				var nextStateId;
 
@@ -692,9 +715,9 @@ RustyTools.Translate.StateManager.prototype.transitionOnToken = function(
 				} else if ((nextStateId = this.getId_(this.current.state.jumpIf,
 						token.str, activeType))) {
 					this.jump(nextStateId);
-				} else if (this.current.state.push) {
+				} else if ((nextStateId = this.current.state.push)) {
 					this.advance();
-					this.push(this.current.state.push, token, opt_closer);
+					this.push(nextStateId, token, opt_closer);
 				} else if (this.current.state.pop) {
 					this.pop_(token);
 				} else if (this.current.state.jump) {
