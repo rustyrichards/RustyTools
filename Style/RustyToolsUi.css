@@ -1,7 +1,7 @@
-/*
-© 2013 Russell W. Richards
-License: Not yet determined.
-*/
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 			.menu {display:inline-block; margin:0; padding:0; float:left;}
 			.menu .drop-menu {background-color:white; width:5em;
 					display:inline-block; padding:2px; float:left;
