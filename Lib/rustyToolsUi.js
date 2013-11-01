@@ -1,3 +1,6 @@
+// © 2013 Russell W. Richards
+// License: Not yet determined.
+
 RustyTools.Ui = {
 	// Strings to use with multiReplace to create components.
 	menu: { sumbStr: '<ul class="menu">'+

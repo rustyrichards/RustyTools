@@ -1,3 +1,6 @@
+// © 2013 Russell W. Richards
+// License: Not yet determined.
+
 // The testers have a lot of tiny functons - use the whole script "use strict".
 "use strict";
 
@@ -117,6 +120,37 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 			var tokens = parseTokens(test);
 			var errors = getErrorTokens(tokens);
 			r.same('}', errors[0].str).same(-1, errors[0].groupingCount);
+		},
+		'statement function',
+		function(t,r) {
+			// fuction
+			var test =
+['				function() {}',
+'				function(a, b) {return a+b;};',
+'				function fName() {return self;}'].join('\n');
+			var tokens = parseTokens(test);
+			var errors = getErrorTokens(tokens);
+			r.not(errors.length);
+		},
+		'statement switch',
+		function(t,r) {
+			// fuction
+			var test =
+['				switch(self) {',
+'					case \'a\':',
+'						break;',
+'					case 1:',
+'						{};',
+'						break;',
+'					case \"xyzzy\":',
+'					case \"plough\":',
+'						{};',
+'						break;',
+'				}',
+'				case'].join('\n');
+			var tokens = parseTokens(test);
+			var errors = getErrorTokens(tokens);
+			r.same(1, errors.length);
 		}
 	]);
 };

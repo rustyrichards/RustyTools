@@ -1,3 +1,6 @@
+// © 2013 Russell W. Richards
+// License: Not yet determined.
+
 // The testers have a lot of tiny functons - use the whole script "use strict".
 "use strict";
 

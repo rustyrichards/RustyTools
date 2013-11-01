@@ -1,3 +1,6 @@
+// © 2013 Russell W. Richards
+// License: Not yet determined.
+
 /**
 * A JavaScript string to token array Translate
 *
@@ -394,9 +397,26 @@ RustyTools.Translate.StateManager = function(stateSet, initialStateName,
 	// down its prototype chain.  This way we don't need to handle passng the
 	// stateManager out of the token handlers.
 	this.current = {state: null, stateIndex: 0,
-			endBlock: opt_StateEndBlock || ''};
+			endBlock: opt_StateEndBlock || '', bitflags: 1};
 
 	this.jump(initialStateName);
+};
+
+// These bit flags can be set when states push.  This allows for determining
+// when certain statements are active.  (Like inside a switch or function.)
+RustyTools.Translate.StateManager.flags = {
+	always: 1,
+	insideFunction: 2,
+	insideSwitch: 4
+};
+
+RustyTools.Translate.StateManager.prototype.addFlag = function(flag) {
+	if (this.current) this.current.bitflags = flag | this.current.bitflags;
+};
+
+RustyTools.Translate.StateManager.prototype.testAllowed = function(flag) {
+	return flag && (((this.current) ? this.current.bitflags :
+			RustyTools.Translate.StateManager.flags.always) & flag);
 };
 
 RustyTools.Translate.StateManager.prototype.getStateName = function() {
@@ -419,19 +439,24 @@ RustyTools.Translate.StateManager.prototype.jump = function(state) {
 
 	this.current.state = this.stateSet.fromIndex(this.current.stateIndex);
 
-	this.handleCall();
-
-	// For chaining.
-	return this;
+	// For handleStateChanged chains.
+	return this.handleStateChanged();
 };
 
-RustyTools.Translate.StateManager.prototype.handleCall = function() {
+RustyTools.Translate.StateManager.prototype.handleStateChanged = function(
+		opt_skipCall) {
+	if (!opt_skipCall) {
+		try {
+			var toCall = this.current.state.call;
+			if (toCall) {
+				this.advance(1, true);
+				this.push(toCall);
+			}
+		} catch (e) {}
+	}
+
 	try {
-		var toCall = this.current.state.call;
-		if (toCall) {
-			this.advance(1, true);
-			this.push(toCall);
-		}
+		if (this.current.state.setFlag) this.addFlag(this.current.state.setFlag);
 	} catch (e) {}
 
 	// For chaining.
@@ -460,8 +485,8 @@ RustyTools.Translate.StateManager.prototype.push = function(state, token, opt_cl
 		this.current.endBlock = '';
 	}
 
-	// For handleCall chains.
-	return this.handleCall();
+	// For handleStateChanged chains.
+	return this.handleStateChanged();
 };
 
 RustyTools.Translate.StateManager.prototype.advance = function(opt_count,
@@ -487,8 +512,8 @@ RustyTools.Translate.StateManager.prototype.advance = function(opt_count,
 
 	if (!this.current.state) this.pop_();
 
-	if (!opt_skipHandleCall) this.handleCall();
-	return this;
+	// For handleStateChanged chains.
+	return this.handleStateChanged(opt_skipHandleCall);
 };
 
 RustyTools.Translate.StateManager.prototype.retreat = function() {
@@ -504,8 +529,8 @@ RustyTools.Translate.StateManager.prototype.backupToStart_ = function() {
 	// Advance one to find the start state. Return true if the state is found.
 	this.current.state = this.stateSet.states[++this.current.stateIndex];
 
-	// For handleCall chains.
-	return this.handleCall();
+	// For handleStateChanged chains.
+	return this.handleStateChanged();
 };
 
 RustyTools.Translate.StateManager.prototype.advanceToEnd_ = function() {
@@ -515,8 +540,8 @@ RustyTools.Translate.StateManager.prototype.advanceToEnd_ = function() {
 
 	this.current.state = this.stateSet.states[this.current.stateIndex];
 
-	// For handleCall chains.
-	return this.handleCall();
+	// For handleStateChanged chains.
+	return this.handleStateChanged();
 };
 
 RustyTools.Translate.StateManager.prototype.pop_ = function(/*token*/) {
@@ -542,8 +567,8 @@ RustyTools.Translate.StateManager.prototype.pop_ = function(/*token*/) {
 	// No need to tansition on the new sate.  The advance before push makes
 	// sure that the popped state is for the next token.
 
-	// For handleCall chains.
-	return this.handleCall();
+	// For handleStateChanged chains.
+	return this.handleStateChanged();
 };
 
 // Find the ID or offset for a given token or type
@@ -671,9 +696,9 @@ RustyTools.Translate.StateManager.prototype.transitionOnToken = function(
 				if (!token.error) {
 					isAllowedMatch = this.current.state.allowed[token.str] ||
 							this.current.state.allowed[token.activeType];
-					if (!isAllowedMatch) {
-						token.setError('The token: "' + token.str + '" was found where "' +
-								Object.keys(this.current.state.allowed).join('", "') + '" is required.');
+					if (!this.testAllowed(isAllowedMatch)) {
+						token.setError('The token: "' + token.str +
+								'" in not allowed in state "' + this.getStateName() + '".');
 					}
 				}
 			}

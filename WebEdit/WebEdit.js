@@ -1,3 +1,6 @@
+// © 2013 Russell W. Richards
+// License: Not yet determined.
+
 /* global document */
 /* global window */
 

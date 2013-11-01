@@ -1,3 +1,6 @@
+// © 2013 Russell W. Richards
+// License: Not yet determined.
+
 RustyTools.configure({
 	matchFail: '<#regex/>.find(<#source/>)\n\t==\n<#match/>\n\tnot\n<#shouldMatch/>',
 	noMatchFail: '<#regex/>.find(<#source/>)\n\t==\n<#match/>',

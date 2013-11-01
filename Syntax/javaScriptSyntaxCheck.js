@@ -1,3 +1,6 @@
+// © 2013 Russell W. Richards
+// License: Not yet determined.
+
 /* global RustyTools */
 
 // Javascript parsing
@@ -17,20 +20,22 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	{
 		id: "statement",
 		allowed: {
-			"-groupStart": true,
-			"do": true, "for": true,
-			"function": true, "if": true,
-			"swtich" : true, "try": true,
-			"var": true, "while": true,
-			"-assignment": true, "-alteration": true,
-			"-value": true, "-variable": true, "-global": true,
-			";": true, ",": true
+			"arguments": RustyTools.Translate.StateManager.flags.insideFunction,
+			"-groupStart": 1,
+			"case": RustyTools.Translate.StateManager.flags.insideSwitch,
+			"do": 1, "for": 1,
+			"function": 1, "if": 1,
+			"switch" : 1, "try": 1,
+			"var": 1, "while": 1,
+			"-assignment": 1, "-alteration": 1,
+			"-value": 1, "-variable": 1, "-global": 1,
+			";": 1, ",": 1
 		},
 		pushIf: {
-			"-groupStart": "statement",
+			"-groupStart": "statement", "case": "caseNeedsValue",
 			"do": "doDefinition", "for": "forDefitition",
 			"function": "functionDef", "if": "ifDefinition",
-			"swtich" : "switchDefinition", "try": "tryDefinition",
+			"switch" : "switchDefinition", "try": "tryDefinition",
 			"var": "varStatement", "while": "whileDefinition",
 			"-assignment": "needsValue", "-alteration": "needsValue",
 			"-value": "hasVar", "-variable": "hasVar", "-global": "hasVar"
@@ -46,8 +51,8 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	{
 		id: "hasVar",
 		allowed: {
-			"{": true, "(": true, ".": true, "[": true, "-assignment": true,
-			"-alteration": true, ",": true, ";": true
+			"{": 1, "(": 1, ".": 1, "[": 1, "-assignment": 1,
+			"-alteration": 1, ",": 1, ";": 1
 		},
 		pushIf: {
 			"{": "statement", "(": "arg", ".": "memberAccess",
@@ -62,7 +67,7 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	{id: "memberAccess", options: RustyTools.Translate.anySymbolName},
 	{
 		id: "memberNext",
-		allowed: {".": true, "[": true},
+		allowed: {".": 1, "[": 1},
 		bypassIfNot: {",": true, ";": true},
 		restartIf: {".": true},
 		pushif: {"[": "oneArg"}
@@ -73,15 +78,15 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	// NOTE: a "{" following an assignment goes into objectNotation (JSON)
 	{
 		id: "needsValue",
-		allowed: {"{": true, "(": true,	"function": true,
-			"-global": true, "-parameter": true, "-value": true, "-variable": true,
-			"-string": true, "-number": true},
+		allowed: {"{": 1, "(": 1,	"function": 1,
+			"-global": 1, "-parameter": 1, "-value": 1, "-variable": 1,
+			"-string": 1, "-number": 1},
 		pushIf: {"{": "jsonName", "(": "statement",	"function": "functionDef"},
 		options: RustyTools.Translate.needsRValue,	// Something to assign
 	},
 	{
 		id: "valueStatement",
-		allowed: {"(": true, ".": true, "[": true},
+		allowed: {"(": 1, ".": 1, "[": 1},
 		pushIf: {"(": "arg", ".": "memberAccess", "[": "oneArg"},
 		bypassIfNot: {"(": true, ".": true, "[": true},
 		options: RustyTools.Translate.ganeralStatement
@@ -92,20 +97,22 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	{
 		id: "oneStatement",
 		allowed: {
-			"-groupStart": true,
-			"do": true, "for": true,
-			"function": true, "if": true,
-			"swtich" : true, "try": true,
-			"var": true, "while": true,
-			"-assignment": true, "-alteration": true,
-			"-value": true, "-variable": true, "-global": true,
-			"{": true, "(": true, ";": true, ",": true
+			"arguments": RustyTools.Translate.StateManager.flags.insideFunction,
+			"-groupStart": 1,
+			"case": RustyTools.Translate.StateManager.flags.insideSwitch,
+			"do": 1, "for": 1,
+			"function": 1, "if": 1,
+			"switch" : 1, "try": 1,
+			"var": 1, "while": 1,
+			"-assignment": 1, "-alteration": 1,
+			"-value": 1, "-variable": 1, "-global": 1,
+			"{": 1, "(": 1, ";": 1, ",": 1
 		},
 		pushIf: {
 			"-groupStart": "statement",
 			"do": "doDefinition", "for": "forDefitition",
 			"function": "functionDef", "if": "ifDefinition",
-			"swtich" : "switchDefinition", "try": "tryDefinition",
+			"switch" : "switchDefinition", "try": "tryDefinition",
 			"var": "varStatement", "while": "whileDefinition",
 			"-assignment": "needsValue", "-alteration": "needsValue",
 			"-value": "hasVar", "-variable": "hasVar", "-global": "hasVar",
@@ -120,16 +127,16 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	// Only a single argument. (Like in array access, io an if statement.)
 	{
 		id: "oneArg",
-		allowed: {"{": true, "(": true,	"function": true,
-			"-global": true, "-parameter": true, "-value": true, "-variable": true,
-			"-string": true, "-number": true},
+		allowed: {"{": 1, "(": 1,	"function": 1,
+			"-global": 1, "-parameter": 1, "-value": 1, "-variable": 1,
+			"-string": 1, "-number": 1},
 		pushIf: {"{": "jsonName", "(": "statement",	"function": "functionDef"},
 		options: RustyTools.Translate.needsRValue
 	},
 	{
 		id: "oneArgHasValue", restartIf: {",": true},
 		pushIf: {"[": "oneArg", "(": "arg", ".": "memberAccess"},
-		allowed: {",": true, "{": true, "(": true, ".": true},	// The closing '}' or ']' will pop
+		allowed: {",": 1, "{": 1, "(": 1, ".": 1},	// The closing '}' or ']' will pop
 		restartIf: {",": true},
 		options: RustyTools.Translate.hasRValue	// Must be a comma or a state pop
 	},	// Must be a comma or a state pop
@@ -138,15 +145,15 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	// Argument or argument list.
 	{
 		id: "arg",
-		allowed: {"{": true, "(": true,	"function": true,
-			"-global": true, "-parameter": true, "-value": true, "-variable": true,
-			"-string": true, "-number": true},
+		allowed: {"{": 1, "(": 1,	"function": 1,
+			"-global": 1, "-parameter": 1, "-value": 1, "-variable": 1,
+			"-string": 1, "-number": 1},
 		pushIf: {"{": "jsonName", "(": "statement",	"function": "functionDef"},
 		options: RustyTools.Translate.needsRValue},
 	{
 		id: "argHasValue",
 		pushIf: {"[": "oneArg", "(": "arg", ".": "memberAccess"},
-		allowed: {",": true, "{": true, "(": true, ".": true},	// The closing '}' will pop
+		allowed: {",": 1, "{": 1, "(": 1, ".": 1},	// The closing '}' will pop
 		restartIf: {",": true},
 		options: RustyTools.Translate.hasRValue	// Must be a comma or a state pop
 	},
@@ -159,7 +166,7 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 		options: RustyTools.Translate.paramDef},
 	{
 		id: "functionParamHasValue",
-		allowed: {"{": true, "(": true, "[": true, ",": true},
+		allowed: {"{": 1, "(": 1, "[": 1, ",": 1},
 		pushIf: {"{": "statement", "(": "statement", "[": "oneArg"},
 		restartIf: {",": true},
 		options: RustyTools.Translate.hasVar	// Must be a comma or a state pop
@@ -168,7 +175,7 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 
 	// Object notation statement
 	{id: "jsonName", options:RustyTools.Translate.needsJsonName},
-	{id: "jsonSep", allowed: {":": true}},
+	{id: "jsonSep", allowed: {":": 1}},
 	{
 		id: "jsonStatement",
 		pushIf: {"{": "jsonName", "(": "statement", "[": "jsonArray"},
@@ -180,16 +187,16 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	// jsonArray - like an argument list except it stays in Object Notation.
 	{
 		id: "jsonArray",
-		allowed: {"{": true, "[": true,	"function": true,
-			"-global": true, "-parameter": true, "-value": true, "-variable": true,
-			"-string": true, "-number": true},
+		allowed: {"{": 1, "[": 1,	"function": 1,
+			"-global": 1, "-parameter": 1, "-value": 1, "-variable": 1,
+			"-string": 1, "-number": 1},
 		pushIf: {"{": "jsonName", "[": "jsonArray",	"function": "functionDef"},
 		options: RustyTools.Translate.needsRValue
 	},
 	{
 		id: "jsonArrayItem",
 		pushIf: {"[": "oneArg", "(": "arg", ".": "memberAccess"},
-		allowed: {",": true, "{": true, "(": true, ".": true},	// The closing '}' will pop
+		allowed: {",": 1, "{": 1, "(": 1, ".": 1},	// The closing '}' will pop
 		restartIf: {",": true},
 		options: RustyTools.Translate.hasRValue	// Must be a comma or a state pop
 	},
@@ -201,34 +208,39 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 		bypassIf: {"(": 1},
 		options: RustyTools.Translate.varDef
 	},
-	{id: "functionBeforeArg", allowed: {"(": true}, pushIf: {"(": "functionParam"}, scopeSymbols:true},
-	{id: "functionBeforeBlock", allowed: {"{": true}, pushIf: {"{": "statement"}},
-	{allowed: {"}": true}, scopeSymbols: false},
+	{id: "functionBeforeArg", allowed: {"(": 1}, pushIf: {"(": "functionParam"}, scopeSymbols:true},
+	{
+		id: "functionBeforeBlock",
+		allowed: {"{": 1},
+		pushIf: {"{": "statement"},
+		setFlag: RustyTools.Translate.StateManager.flags.insideFunction,
+	},
+	{pop: true, scopeSymbols: false},
 	null,
 
 	{id: "varStatement", options: RustyTools.Translate.varDef},
-	{id: "varDefined", allowed: {",": true, ";": true, "-assignment": true},
+	{id: "varDefined", allowed: {",": 1, ";": 1, "-assignment": 1},
 			restartIf: {",": true}, popIf: {";": true},
 			pushIf: {"-assignment": "needsValue"}, options: RustyTools.Translate.hasNewVar},
 	null,
 
-	{id: "swtichNeedsArg", allowed: {"(": true}, pushIf: {"(": "oneArg"}},
-	{id: "switchBeforeBody", allowed: {"{": true}, pushIf: {"{": "statement"}},
+	{id: "swtichNeedsArg", allowed: {"(": 1}, pushIf: {"(": "oneArg"}},
+	{id: "switchBeforeBody", allowed: {"{": 1}, pushIf: {"{": "statement"}},
 	null,
 
 	// case statnment
 	{
 		id: "caseNeedsValue",
-		allowed: {"{": true, "(": true,	"function": true,
-			"-global": true, "-parameter": true, "-value": true, "-variable": true,
-			"-string": true, "-number": true},
+		allowed: {"{": 1, "(": 1,	"function": 1,
+			"-global": 1, "-parameter": 1, "-value": 1, "-variable": 1,
+			"-string": 1, "-number": 1},
 		pushIf: {"{": "jsonName", "(": "statement",	"function": "functionDef"},
 		options: RustyTools.Translate.needsRValue
 	},
 	{
 		id: "caseHasValue",
 		pushIf: {"[": "oneArg", "(": "arg", ".": "memberAccess"},
-		allowed: {",": true, "{": true, "(": true, ".": true, ":": true},
+		allowed: {",": 1, "{": 1, "(": 1, ".": 1, ":": 1},
 		restartIf: {",": true},
 		popIf: {":": true},
 		options: RustyTools.Translate.hasRValue	// Must be a comma or a state pop
@@ -238,16 +250,16 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	// Conditional statement first half
 	{
 		id: "condNeedsFirst",
-		allowed: {"{": true, "(": true,	"function": true,
-			"-global": true, "-parameter": true, "-value": true, "-variable": true,
-			"-string": true, "-number": true},
+		allowed: {"{": 1, "(": 1,	"function": 1,
+			"-global": 1, "-parameter": 1, "-value": 1, "-variable": 1,
+			"-string": 1, "-number": 1},
 		pushIf: {"{": "jsonName", "(": "statement",	"function": "functionDef"},
 		options: RustyTools.Translate.needsRValue
 	},
 	{
 		id: "condHasFirst",
 		pushIf: {"[": "oneArg", "(": "arg", ".": "memberAccess", ":": "condNeedsSecond"},
-		allowed: {",": true, "{": true, "(": true, ".": true, ":": true},
+		allowed: {",": 1, "{": 1, "(": 1, ".": 1, ":": 1},
 		restartIf: {",": true}
 	},
 	// Trick to make the restart work - the ":" jumps to "condNeedsSecond"
@@ -256,31 +268,31 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	// Conditional statement second half
 	{
 		id: "condNeedsSecond",
-		allowed: {"{": true, "(": true,	"function": true,
-			"-global": true, "-parameter": true, "-value": true, "-variable": true,
-			"-string": true, "-number": true},
+		allowed: {"{": 1, "(": 1,	"function": 1,
+			"-global": 1, "-parameter": 1, "-value": 1, "-variable": 1,
+			"-string": 1, "-number": 1},
 		pushIf: {"{": "jsonName", "(": "statement",	"function": "functionDef"},
 		options: RustyTools.Translate.needsRValue
 	},
 	{
 		id: "condHasSecond",
 		pushIf: {"[": "oneArg", "(": "arg", ".": "memberAccess", ":": "condNeedsSecond"},
-		allowed: {",": true, "{": true, "(": true, ".": true, ";": true},
+		allowed: {",": 1, "{": 1, "(": 1, ".": 1, ";": 1},
 		restartIf: {",": true},
 		popIf: {";": true}
 	},
 	null,
 
 	// for statement
-	{id: "forDefinition", allowed: {"(": true}, pushIf: {"(": "inForStatement1"}},
+	{id: "forDefinition", allowed: {"(": 1}, pushIf: {"(": "inForStatement1"}},
 	{id: "forBeforeBlock", pushIf: {"{": "statement"}, push: "oneStatement"},
 	// If there is a block it will stack
 	null,
 
 	// for statement
 	{id: "doDefinition", call: "oneStatement"},
-	{id: "whileStatement", allowed: {"while": true}},
-	{id: "whileArg", allowed: {"(": true}, pushIf: {"(": "oneArg"}},
+	{id: "whileStatement", allowed: {"while": 1}},
+	{id: "whileArg", allowed: {"(": 1}, pushIf: {"(": "oneArg"}},
 	// If there is a block it will stack
 	null,
 
@@ -290,7 +302,7 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	{id: "inForStatement3", jump: "oneStatement"},	// Jump so the oneStatement pop will return to the caller.
 
 	// if statement
-	{id: "ifDefinition", allowed: {"(": true}, pushIf: {"(": "oneArg"}},
+	{id: "ifDefinition", allowed: {"(": 1}, pushIf: {"(": "oneArg"}},
 	{id: "ifBeforeBlock", pushIf: {"{": "statement"}, push: "oneStatement"},
 	{id: "ifAfterBlock", jumpIf: {"else": "elseDefinition"}, pop: true},
 	null,
@@ -301,28 +313,33 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	null,
 
 	// switch statement
-	{id: "switchDefinition", allowed: {"(": true}, pushIf: {"(": "oneArg"}},
-	{id: "whileBeforeBlock", allowed: {"{": true}, pushIf: {"{": "statement"}},
+	{id: "switchDefinition", allowed: {"(": 1}, pushIf: {"(": "oneArg"}},
+	{
+		id: "switchBeforeBlock",
+		allowed: {"{": 1},
+		pushIf: {"{": "statement"},
+		setFlag: RustyTools.Translate.StateManager.flags.insideSwitch
+	},
 	null,
 
 	// try statement
-	{id: "tryDefinition", allowed: {"{": true}, pushIf: {"{": "statement"}},
-	{id: "tryAfterBlock", allowed: {"catch": true, 'finally': true}, jumpIf: {
+	{id: "tryDefinition", allowed: {"{": 1}, pushIf: {"{": "statement"}},
+	{id: "tryAfterBlock", allowed: {"catch": 1, 'finally': 1}, jumpIf: {
 		"catch": "catchDefinition", "finally": "finallyhDefinition"}},
 	null,
 
 	// catch statement
-	{id: "catchDefinition", allowed: {"(": true}, pushIf: {"(": "oneArg"}},
-	{id: "catchBeforeBlock", allowed: {"{": true}, pushIf: {"{": "statement"}},
+	{id: "catchDefinition", allowed: {"(": 1}, pushIf: {"(": "oneArg"}},
+	{id: "catchBeforeBlock", allowed: {"{": 1}, pushIf: {"{": "statement"}},
 	{id: "catchAfterBlock", jumpIf: {"finally": "finallyhDefinition"}, pop: true},
 	null,
 
 	// finally statement
-	{id: "finallyDefinition", allowed: {"{": true}, pushIf: {"{": "statement"}},
+	{id: "finallyDefinition", allowed: {"{": 1}, pushIf: {"{": "statement"}},
 	null,
 
 	// while statement
-	{id: "whileDefinition", allowed: {"(": true}, pushIf: {"(": "oneArg"}},
+	{id: "whileDefinition", allowed: {"(": 1}, pushIf: {"(": "oneArg"}},
 	{id: "whileBeforeBlock", pushIf: {"{": "statement"}, push: "oneStatement"},
 	null
 ]);

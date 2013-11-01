@@ -1,3 +1,6 @@
+// © 2013 Russell W. Richards
+// License: Not yet determined.
+
 // Functional support
 // Chain to the global object so RustyTools.Fn can be the context for function calls
 RustyTools.Fn = RustyTools.wrapObject(self);

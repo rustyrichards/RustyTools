@@ -1,3 +1,6 @@
+// © 2013 Russell W. Richards
+// License: Not yet determined.
+
 RustyTools.Xhr = {
 	convertJson: (JSON && JSON.parse) ? JSON.parse :
 			function(jsonStr) {

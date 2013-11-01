@@ -1,3 +1,6 @@
+// © 2013 Russell W. Richards
+// License: Not yet determined.
+
 'object' === typeof self.RustyTools || (RustyTools = {});
 
 RustyTools.Str = {
