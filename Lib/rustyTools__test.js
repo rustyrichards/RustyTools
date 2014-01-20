@@ -74,7 +74,21 @@ RustyTools.__test = function(t, r) {
 
 		'RustyTools.wrapObject',
 		function(t, r) {
-			r.not(RustyTools.cfg.xTest).different(RustyTools.cfg.xTest, RustyToolsTest.cfg.xTest);
+			var base = {a: 1, b: "two"};
+			var obj = {inner: base};
+			var wrapped = RustyTools.wrapObject(obj);
+			r.same(wrapped.inner, obj.inner).is(wrapped.rustyToolsIsWrapped());
+		},
+
+		'RustyTools.wrapObject wrap 3 times',
+		function(t, r) {
+			var base = {a: 1, b: "two"};
+			var obj = {inner: base};
+			var wrapped1 = RustyTools.wrapObject(obj);
+			var wrapped2 = RustyTools.wrapObject(wrapped1);
+			var wrapped3 = RustyTools.wrapObject(wrapped2);
+			r.different(wrapped3, wrapped2).different(wrapped2, wrapped1).
+					different(wrapped1, obj);
 		},
 
 		'RustyTools.cloneOneLevel',

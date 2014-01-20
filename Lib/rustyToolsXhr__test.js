@@ -17,8 +17,8 @@ RustyTools.Xhr.__test = function(t, r) {
 					t.test([
 						'RustyTools.Xhr.httpRequest onSuccessCallback',
 						function(t, r) {
-							// The content of RustyTools.empty should begin with "RustyTools.Empty"
-							r.match(/^RustyTools\.Empty/, strData, 'RustyTools.Empty');
+							// The content of RustyTools.empty should end with "RustyTools.Empty = {};"
+							r.match(/RustyTools\.Empty = {};\s*$/, strData);
 						}
 					]);
 				}, onFailureCallback: function(request) {
