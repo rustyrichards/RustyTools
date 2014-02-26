@@ -76,39 +76,39 @@ RustyTools.Str.__test = function(t, r) {
 
 		'RustyTools.Str.multiReplace',
 		function(t, r) {
-			var source = 'Param1: <#1/>, Param12: <#12/>, Param2: <#2/>, Param3: <#3/>, ' +
-					'Param4: <#4/>, Param5: <#5/>, Param6: <#6/>, Param7: <#7/>, Param8: <#8/>, '+
-					'Param9: <#9/>, Param11: <#11/>, all except 10: ' +
-					'<#1/>,<#2/>,<#3/>,<#4/>,<#5/>,<#6/>,<#7/>,<#8/>,<#9/>,<#11/>,<#12/>,<#13/>';
+			var source = 'Param1: <repl:1/>, Param12: <repl:12/>, Param2: <repl:2/>, Param3: <repl:3/>, ' +
+					'Param4: <repl:4/>, Param5: <repl:5/>, Param6: <repl:6/>, Param7: <repl:7/>, Param8: <repl:8/>, '+
+					'Param9: <repl:9/>, Param11: <repl:11/>, all except 10: ' +
+					'<repl:1/>,<repl:2/>,<repl:3/>,<repl:4/>,<repl:5/>,<repl:6/>,<repl:7/>,<repl:8/>,<repl:9/>,<repl:11/>,<repl:12/>,<repl:13/>';
 			var subst = {1: 'a', 2: 'b', 3: 3.3, 4: 'd', 5: 'e', 6: 'f', 7: 'g', 8: 'h',
 					9: 'i', 10: 'j', 11: 'k', 12: function() {return 'l';}};
 			var replaced1 = RustyTools.Str.multiReplace(source, subst);
 			var shouldbe1 = 'Param1: a, Param12: l, Param2: b, Param3: 3.3, ' +
 					'Param4: d, Param5: e, Param6: f, Param7: g, Param8: h, ' +
 					'Param9: i, Param11: k, all except 10: ' +
-					'a,b,3.3,d,e,f,g,h,i,k,l,<#13/>';
+					'a,b,3.3,d,e,f,g,h,i,k,l,<repl:13/>';
 			var filtered = RustyTools.Str.mulitReplaceCleanup(replaced1);
 			r.different(source, replaced1).same(replaced1, shouldbe1).
 				same(filtered, shouldbe1.replace(/<[^>]*>/g, ''));
 		},
 
 		function(t, r) {
-			var source = '<div class="widget" id="widget<+widgetNo/>">\n' +
-					'<#widgetContent><img src="<-#imgSrc/>">\n</#widgetContent>' +
+			var source = '<div class="widget" id="widget<inc:widgetNo/>">\n' +
+					'<repl:widgetContent><img src="<-repl:imgSrc/>">\n</repl:widgetContent>' +
 					'</div>';
 			var subst = {widgetNo: 1, widgetContent: [
 						{imgSrc: 'test1.png'},
 						{imgSrc: 'test2.png'}
 					]};
 			var replaced = RustyTools.Str.multiReplace(source, subst);
-			// No remaining <-# or <#, and it should have 2 img tags.
-			r.noMatch(/<-*#/, replaced).match(/(<img src\="test[0-9]\.png">\s*){2}/g, replaced).
+			// No remaining <-repl: or <repl:, and it should have 2 img tags.
+			r.noMatch(/<-*repl:/, replaced).match(/(<img src\="test[0-9]\.png">\s*){2}/g, replaced).
 					// Make sure the widgetNo increased
 					same(2, subst.widgetNo).logObjects(replaced);
 		},
 
 		function(t, r) {
-			var source = '<div><#inner/></div>';
+			var source = '<div><repl:inner/></div>';
 			var subst = {inner: '<div class="inner">inner text</div>'};
 			var replaced1 = RustyTools.Str.multiReplace(source, subst, 'none');
 			var replaced2 = RustyTools.Str.multiReplace(source, subst);
@@ -118,8 +118,8 @@ RustyTools.Str.__test = function(t, r) {
 		},
 
 		function(t, r) {
-			var source = '<div class="widget" id="widget<+widgetNo/>">\n' +
-				'<#inner>widgetNo keeps increasing: <+widgetNo/>\n</#inner>' +
+			var source = '<div class="widget" id="widget<inc:widgetNo/>">\n' +
+				'<repl:inner>widgetNo keeps increasing: <inc:widgetNo/>\n</repl:inner>' +
 				'</div>';
 			var subst = {widgetNo: 1, inner: [{},{},{}]};
 			var subst_unchanged = RustyTools.cloneOneLevel(subst);

@@ -36,6 +36,13 @@ RustyTools.Testing.Record = function(description, test) {
 	this.log = '';
 };
 
+RustyTools.Testing.Record.prototype.errorIf = function(obj) {
+	"use strict";
+	if (this.error) this.error += '\n\n';
+
+	this.error += RustyTools.Str.toString(obj);
+};
+
 RustyTools.Testing.Record.prototype.addError = function(str /* objects */) {
 	"use strict";
 	if (this.error) this.error += '\n\n';

@@ -357,10 +357,10 @@ RustyTools.Str = {
 
 
 	/*
-	 * multiReplace - replace the taga <#id>...</#id>, <#id/>, or <+id/> etc with the supplied
-	 *                parameters. (The <+id should be numbers they will be pos incremented.)
+	 * multiReplace - replace the taga <repl:id>...</repl:id>, <repl:id/>, or <inc:id/> etc with the supplied
+	 *                parameters. (The <inc:id should be numbers they will be post incremented.)
 	 *
-	 *                To allow for recursive substitution <-#id>...</-#id>, <-#id/> and <-+id/>
+	 *                To allow for recursive substitution <-repl:id>...</-repl:id>, <-repl:id/> and <-inc:id/>
 	 *                should be used inside the content, with one extra '-' added for each
 	 *                substitution level.
 	 *                Note: the '-' is usually note needed.  Because the content is supstituted
@@ -390,13 +390,13 @@ RustyTools.Str = {
 
 			// Order of replacement matters.
 			//  1) do the content matches
-			//  2) do the <# matches
-			//  3) do the <+ matches
+			//  2) do the <repl: matches
+			//  3) do the <inc: matches
 			// This way any auto-incrementing numbers will happen accross the whole string.
 
 			// Match <#id>...</#id>
 			var context = this;
-			var result = result.replace(/<#([^\/>]+)>([\s\S]*)<\/#\1>/g,
+			var result = result.replace(/<repl:([^\/>]+)>([\s\S]*)<\/repl:\1>/g,
 				function(match, keys, content) {
 					var keys = keys.split(',')
 					for (j=0; j<keys.length; j++) {
@@ -406,7 +406,7 @@ RustyTools.Str = {
 							if (content) {
 								// Recursively call multireplace on the content
 								// Remove one level of - from <-*n
-								var adjContent = content.replace(/(<\/?-*?)-([\+#])/g, '$1$2');
+								var adjContent = content.replace(/(<\/?)-(-*repl:)/g, '$1$2');
 
 								if (Array.isArray(substValue)) {
 									matches[key] = '';
@@ -428,12 +428,12 @@ RustyTools.Str = {
 					}
 				});
 
-			// Match <#id/> or <+id/>
-			result = result.replace(/<(#|\+)([^\/>]+)\/>/g,
+			// Match <repl:id/> or <inc:id/>
+			result = result.replace(/<(repl:|inc:)([^\/>]+)\/>/g,
 				function(match, symbol, key) {
 					var retVal = match;
 					if (key in substObj) {
-						if ('+' === symbol) {
+						if ('inc:' === symbol) {
 							retVal = RustyTools.Str.toString(substObj[key]++);
 						} else {
 							var val = substObj[key];
@@ -457,7 +457,7 @@ RustyTools.Str = {
 	 */
 	mulitReplaceCleanup: function(str) {
 		"use strict";
-		return str.replace(/<(-*)(#|\+)([^\/>]+)(?:\/>|>([\s\S]*)<\/\1\2\3>)/g, '');
+		return str.replace(/<(-*)(repl:|inc:)([^\/>]+)(?:\/>|>([\s\S]*)<\/\1\2\3>)/g, '');
 	},
 
 	substitute: function(str, key, value) {

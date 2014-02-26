@@ -180,15 +180,15 @@ var html = tester.buildDom(
 		'</style>' +
 	'</head>' +
 	'<body>' +
-	'<#allResults><div class="testFrame <#resultType/>"><h1>' +
-	'<#resultType/> - <#resultCount/></h1><#results>' +
-		'<div class="description"><#description/></div>'+
-		'<div class="test"><#test/>'+
-			'<div class="log"><#log/></div>'+
-			'<div class="error"><#error/></div>'+
-			'<div class="exception"><#exception/></div>'+
+	'<repl:allResults><div class="testFrame <repl:resultType/>"><h1>' +
+	'<repl:resultType/> - <repl:resultCount/></h1><repl:results>' +
+		'<div class="description"><repl:description/></div>'+
+		'<div class="test"><repl:test/>'+
+			'<div class="log"><repl:log/></div>'+
+			'<div class="error"><repl:error/></div>'+
+			'<div class="exception"><repl:exception/></div>'+
 		'</div>' +
-	'</#results></div></#allResults>' +
+	'</repl:results></div></repl:allResults>' +
 	'</body>' +
 	'</html>');
 
