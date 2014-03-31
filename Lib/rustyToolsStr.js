@@ -394,7 +394,7 @@ RustyTools.Str = {
 			//  3) do the <inc: matches
 			// This way any auto-incrementing numbers will happen accross the whole string.
 
-			// Match <#id>...</#id>
+			// Match <repl:ID>...</repl:ID>
 			var context = this;
 			var result = result.replace(/<repl:([^\/>]+)>([\s\S]*)<\/repl:\1>/g,
 				function(match, keys, content) {

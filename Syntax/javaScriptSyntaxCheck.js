@@ -23,6 +23,7 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 		allowed: {
 			"arguments": RustyTools.Translate.StateManager.flags.insideFunction,
 			"-groupStart": 1,
+			"break": RustyTools.Translate.StateManager.flags.insideSwitch,
 			"case": RustyTools.Translate.StateManager.flags.insideSwitch,
 			"do": 1, "for": 1,
 			"function": 1, "if": 1,
@@ -290,7 +291,7 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 	// If there is a block it will stack
 	null,
 
-	// for statement
+	// do statement
 	{id: "doDefinition", call: "oneStatement"},
 	{id: "whileStatement", allowed: {"while": 1}},
 	{id: "whileArg", allowed: {"(": 1}, pushIf: {"(": "oneArg"}},
@@ -482,8 +483,8 @@ var javaScriptSyntaxCheck = {
 				check: RustyTools.Translate.check.ifGroupMatched},
 	],
 
-	lValueError: 'The <#getActiveType/>  "<#str/>" is not allowed in the var or function declaration.',
-	rValueError: 'The <#getActiveType/>  "<#str/>" is not allowed  where a value is required.',
+	lValueError: 'The <repl:getActiveType/>  "<repl:str/>" is not allowed in the var or function declaration.',
+	rValueError: 'The <repl:getActiveType/>  "<repl:str/>" is not allowed  where a value is required.',
 
 	// Start in the general statement, not in a block.
 	stateManager: new RustyTools.Translate.StateManager(javaScriptStates, 'statement'),
@@ -568,7 +569,7 @@ var javaScriptSyntaxCheck = {
 		"use strict";
 		var next;
 		if ('string' !== typeof types) {
-			var index = types.indexOf(RustyTools.Translate.types.unaryPrefix) + 1;
+			var index = types.indexOf(current) + 1;
 			if (index < types.length) {
 				next = this[types[index]];
 			}
@@ -590,6 +591,9 @@ var javaScriptSyntaxCheck = {
 
 	isValue: function(token, inFrontOfToken) {
 		"use strict";
+		// token == falsy means not a value.
+		if (!token) return false;
+
 		if (token.types === RustyTools.Translate.types.symbol) this.adjustKeyword(token);
 
 		var isValue = token.types === RustyTools.Translate.types.symbol;
@@ -610,7 +614,7 @@ var javaScriptSyntaxCheck = {
 	},
 
 	isUnaryOperator: function(token) {
-		return !token.error && ("-unaryPrefix" === token.activeType ||
+		return token && !token.error && ("-unaryPrefix" === token.activeType ||
 				"-unarySuffix" === token.activeType);
 	},
 
@@ -643,12 +647,7 @@ var javaScriptSyntaxCheck = {
 			// This symbol may have had other types or options
 			token.check = RustyTools.Translate.check.unaryOperator;
 		} else {
-			var callNext = this.tryNext("-unarySuffix", this.types);
-			if (callNext) {
-				callNext.apply(this, Array.prototype.slice(arguments, 0));
-			} else {
-				token.setError('"' + str + '" is not allowed here.');
-			}
+			token.callNextType("-unarySuffix");
 		}
 		return;
 	},
@@ -666,12 +665,7 @@ var javaScriptSyntaxCheck = {
 			// This symbol may have had other types or options
 			token.check = RustyTools.Translate.check.unaryOperator;
 		} else {
-			var callNext = this.tryNext("-unaryPrefix", this.types);
-			if (callNext) {
-				callNext.apply(this, Array.prototype.slice(arguments, 0));
-			} else {
-				token.setError('"' + str + '" is not allowed here.');
-			}
+			token.callNextType("-unaryPrefix");
 		}
 		return;
 	},
@@ -691,12 +685,7 @@ var javaScriptSyntaxCheck = {
 			// This symbol may have had other types or options
 			token.check = RustyTools.Translate.check.binaryOperator;
 		} else {
-			var callNext = this.tryNext("-binary", this.types);
-			if (callNext) {
-				callNext.apply(this, Array.prototype.slice(arguments, 0));
-			} else {
-				token.setError('"' + str + '" is not allowed here.');
-			}
+			token.callNextType("-binary");
 		}
 		return;
 	},

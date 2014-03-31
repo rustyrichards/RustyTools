@@ -143,6 +143,7 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 '						break;',
 '					case 1:',
 '						{};',
+'           self;',
 '						break;',
 '					case \"xyzzy\":',
 '					case \"plough\":',

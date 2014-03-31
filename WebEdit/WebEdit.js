@@ -43,8 +43,8 @@ var editControl = {
 	setCSSText: function() {
 		"use strict";
 		var css = RustyTools.Str.multiReplace(
-			'font-size:<#fontSize/>pt; tab-size:<#tabSize/>; -moz-tab-size:<#tabSize/>;' +
-			' -ms-tab-size:<#tabSize/>;', this);
+			'font-size:<repl:fontSize/>pt; tab-size:<repl:tabSize/>; -moz-tab-size:<repl:tabSize/>;' +
+			' -ms-tab-size:<repl:tabSize/>;', this);
 		document.getElementById('edit-parent').style.cssText = css;
 	},
 
@@ -264,8 +264,8 @@ var editControl = {
 				case 'lineBreak':
 				case 'whitespace':
 					result +=  RustyTools.Str.mulitReplaceCleanup(
-							RustyTools.Str.multiReplace('<span id="token-<#index/>" ' +
-									'class="<#getCombindedClass/>"><#str/></span>', token, 'pre'));
+							RustyTools.Str.multiReplace('<span id="token-<repl:index/>" ' +
+									'class="<repl:getCombindedClass/>"><repl:str/></span>', token, 'pre'));
 					break;
 				case 'grouping':
 					var groupingCount = token.groupingCount;
@@ -274,9 +274,9 @@ var editControl = {
 					// Fall trhough wanted.
 				default:
 					result += RustyTools.Str.mulitReplaceCleanup(
-							RustyTools.Str.multiReplace('<span id="token-<#index/>" ' +
-							'class="<#getCombindedClass/>" title="<#errorMessage/>">' +
-							'<#str/></span>', token, 'pre'));
+							RustyTools.Str.multiReplace('<span id="token-<repl:index/>" ' +
+							'class="<repl:getCombindedClass/>" title="<repl:errorMessage/>">' +
+							'<repl:str/></span>', token, 'pre'));
 			}
 		}
 		return result;
@@ -449,7 +449,7 @@ var page = {
 
 		// To keep the order correct just load an error message as the buffer.
 		this.urlLoaded(RustyTools.Str.multiReplace('<div style="color:red">' +
-				'Failure: <#status/>  Loading: <#url/></div>', [request, this]),
+				'Failure: <repl:status/>  Loading: <repl:url/></div>', [request, this]),
 				obj, url, true);
 	},
 
@@ -601,5 +601,5 @@ var page = {
 
 /***
 Bookmarklet to edit the current web page.
-javascript:var url = '//googledrive.com/host/0B6hrjAwMff9xOGczWHdqUzl5akU/WebEdit/WebEdit.html?href='; url += encodeURIComponent(window.location.href); var scripts = document.getElementsByTagName('script'); var i = scripts.length; while (i--) {if (scripts[i].src) url += "&href=" + encodeURIComponent(scripts[i].src);} window.open(url);
+javascript:var url = '//googledrive.com/host/0B6hrjAwMff9xOGczWHdqUzl5akU/rustyTools/WebEdit.html?href='; url += encodeURIComponent(window.location.href); var scripts = document.getElementsByTagName('script'); var i = scripts.length; while (i--) {if (scripts[i].src) url += "&href=" + encodeURIComponent(scripts[i].src);} window.open(url);
 ***/

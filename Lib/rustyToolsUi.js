@@ -6,36 +6,36 @@
 RustyTools.Ui = {
 	// Strings to use with multiReplace to create components.
 	menu: { sumbStr: '<ul class="menu">'+
-					'<#menu>'+
-						'<li class="drop-menu"><a href="#"><#menuName/></a>'+
-							'<ul id="menu-<#menuName/>">'+
-								'<#subMenu>'+
-									'<li><a href="#<#id/>"><#content/></a></li>'+
-								'</#subMenu>'+
+					'<repl:menu>'+
+						'<li class="drop-menu"><a href="#"><repl:menuName/></a>'+
+							'<ul id="menu-<repl:menuName/>">'+
+								'<repl:subMenu>'+
+									'<li><a href="#<repl:id/>"><repl:content/></a></li>'+
+								'</repl:subMenu>'+
 							'</ul>'+
 						'</li>'+
-					'</#menu>'+
+					'</repl:menu>'+
 				'</ul>',
 				// readjustRegEx If the content is a tag - remove the <a..> wrapper.
 				readjustRegEx: /<a href="#">(<)|(>)<\/a>/g,
 				readjustReplace: '$1$2'
 	},
 
-	checkItem: '<label><input type="checkbox" <#1/>/><#2/></label>',
+	checkItem: '<label><input type="checkbox" <repl:1/>/><repl:2/></label>',
 
-	radioItem: '<label><input type="radio" name="<#1/>" value="<#2/>"/>' +
-			'<span class="<#2/>"><#3/></span></label>',
+	radioItem: '<label><input type="radio" name="<repl:1/>" value="<repl:2/>"/>' +
+			'<span class="<repl:2/>"><repl:3/></span></label>',
 
-	numberInputItem: '<label><#1/><input id="<#2/>" type="number" ' +
-			'min="<#2/>" max="<#4/>" value="<#5/>" step="<#6/>"/></input>',
+	numberInputItem: '<label><repl:1/><input id="<repl:2/>" type="number" ' +
+			'min="<repl:2/>" max="<repl:4/>" value="<repl:5/>" step="<repl:6/>"/></input>',
 
 	lineNumber: '<div class="line-number" contenteditable="false" ' +
 		'onselectStart="RustyTools.disallow();" ' +
-		'onmousedown="RustyTools.disallow();"><#1/></div>',
+		'onmousedown="RustyTools.disallow();"><repl:1/></div>',
 
 	replace: function(template /* args */) {
 		"use strict";
-		// Match <#id/> or <+id/>
+		// Match <repl:id/> or <inc:id/>
 		var params = Array.prototype.slice.call(arguments, 0);
 		return template.replace(/<(#|\+)([0-9]+)\/>/g,
 			function(match, symbol, key) {

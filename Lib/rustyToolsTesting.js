@@ -4,12 +4,12 @@
 
 
 RustyTools.configure({
-	matchFail: '<#regex/>.find(<#source/>)\n\t==\n<#match/>\n\tnot\n<#shouldMatch/>',
-	noMatchFail: '<#regex/>.find(<#source/>)\n\t==\n<#match/>',
-	sameFail: '<#1/>\n \tis not\n<#2/>',
-	differentFail: '<#1/>\n\tis\n<#2/>',
-	notFail: '<#val/>\n\t is not falsy.',
-	isFail: '<#val/>\n\t is not truthy.'
+	matchFail: '<repl:regex/>.find(<repl:source/>)\n\t==\n<repl:match/>\n\tnot\n<repl:shouldMatch/>',
+	noMatchFail: '<repl:regex/>.find(<repl:source/>)\n\t==\n<repl:match/>',
+	sameFail: '<repl:1/>\n \tis not\n<repl:2/>',
+	differentFail: '<repl:1/>\n\tis\n<repl:2/>',
+	notFail: '<repl:val/>\n\t is not falsy.',
+	isFail: '<repl:val/>\n\t is not truthy.'
 });
 
 // This can't inherit from RegExp it gives the exception:
