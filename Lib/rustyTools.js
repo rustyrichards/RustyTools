@@ -14,6 +14,29 @@ RustyTools = {
 	// objects are referenced/aliased.
 	addOneLevel: function(dest /* objects */) {
 		"use strict";
+		function addToDest(key, source) {
+			var property = source[key];
+			if (property instanceof Function) {
+				// Alias function objects do not deep copy
+				dest[key] = property;
+			} else if (property instanceof RegExp) {
+				// Alias all RegExp
+				dest[key] = property;
+			} else if (property instanceof Array) {
+				// Array - append all the array values.
+				if (!(dest[key] instanceof Array)) dest[key] = [];
+				dest[key] = dest[key].concat(property);
+			} else if (property instanceof Object) {
+				// Object - for all items in config  replace those entries in dest.
+				if (!(dest[key] instanceof Object)) dest[key] = {};
+				for (var j in property) {
+					if (property.hasOwnProperty(j)) dest[key][j] = property[j];
+				}
+			} else {
+				dest[key] = property;
+			}
+		}
+
 		for (var i=1; i<arguments.length; i++) {
 			var toClone = arguments[i];
 			if ('object' !== typeof toClone) {
@@ -21,29 +44,14 @@ RustyTools = {
 			}
 
 			if (toClone) {
-				for (var key in toClone) {
-					if (toClone.hasOwnProperty(key)) {
-						var property = toClone[key];
-						if (property instanceof Function) {
-							// Alias function objects do not deep copy
-							dest[key] = property;
-						} else if (property instanceof RegExp) {
-							// Alias all RegExp
-							dest[key] = property;
-						} else if (property instanceof Array) {
-							// Array - append all the array values.
-							if (!(dest[key] instanceof Array)) dest[key] = [];
-							dest[key] = dest[key].concat(property);
-						} else if (property instanceof Object) {
-							// Object - for all items in config  replace those entries in dest.
-							if (!(dest[key] instanceof Object)) dest[key] = {};
-							for (var j in property) {
-								if (property.hasOwnProperty(j)) dest[key][j] = property[j];
-							}
-						} else {
-							dest[key] = property;
-						}
-					}
+				try {
+					Object.getOwnPropertyNames(toClone).forEach(function(key) {
+						addToDest(key, toClone);
+					});
+				} catch (e) {
+					// Unable to use getOwnPropertyNames - try for ... in.  It will
+					// probably be incomplete if toClone is the global object
+					if (toClone.hasOwnProperty(key)) addToDest(key, toClone);
 				}
 			}
 		}
@@ -67,7 +75,16 @@ RustyTools = {
 	cloneOneLevel: function(/* objects */) {
 		"use strict";
 		var params = Array.prototype.slice.call(arguments, 0);
-		params.unshift({});
+		// If possible make dest have the same prototype as the first object.
+		var dest;
+		try {
+			// Same prototype as the first prarmeter
+			dest =  Object.create(Object.getPrototypeOf(params[0]));
+		} catch (e) {
+			// Cound not use the prototype of the first parameter - use generic object.
+			dest = {};
+		}
+		params.unshift(dest);
 
 		return this.addOneLevel.apply(this, params);
 	},

@@ -351,7 +351,7 @@ var javaScriptStates = new RustyTools.Translate.StateSet([
 var javaScriptSyntaxCheck = {
 	state: 0,								// Used for validation and state progression
 
-	// Prefix with '__' to make the cloning easy
+	// Prefix with '-' to make the cloning easy
 	keywords: {
 		"-arguments": RustyTools.Translate.types.valueKeyword,
 		"-break": RustyTools.Translate.types.keyword,
