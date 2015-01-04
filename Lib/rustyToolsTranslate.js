@@ -2,6 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/*jshint    eqnull: true, curly: false, latedef: true, newcap: true, undef: true, unused: true, strict: true, browser: true, devel: true*/
+/* global RustyTools, self */
+
+
+'object' === typeof self.RustyTools || (RustyTools = {});
+
 
 /**
 * A JavaScript string to token array Translate
@@ -86,7 +92,7 @@ RustyTools.Translate.Token.prototype.setError = function(opt_errorMessage) {
 			'  line: ' + this.line + '  position: ' + this.linePosition;
 
 	this.error = true;
-};
+}
 
 RustyTools.Translate.Token.prototype.clearError = function() {
 	'use strict';
@@ -166,7 +172,7 @@ RustyTools.Translate.Token.prototype.callNextType = function(typeStr, context,
 	"use strict";
 	var next;
 	if ('string' !== typeof this.types) {
-		var index = this.types.indexOf(current) + 1;
+		var index = this.types.indexOf(typeStr) + 1;
 		if (index < this.types.length) {
 			next = this[this.types[index]];
 		}
@@ -175,7 +181,7 @@ RustyTools.Translate.Token.prototype.callNextType = function(typeStr, context,
 	if (next) {
 		next.apply(context, argArray);
 	} else {
-		this.setError('"' + str + '" is not allowed here.');
+		this.setError('"' + typeStr + '" is not allowed here.');
 	}
 };
 
@@ -473,7 +479,7 @@ RustyTools.Translate.StateManager.prototype.getStateName = function() {
 	var name = '';
 	try {
 		name = this.current.state.name;
-	} catch (e) {};
+	} catch (e) {}
 	return name;
 };
 
@@ -711,15 +717,18 @@ RustyTools.Translate.StateManager.prototype.checkToken = function(token) {
 };
 
 RustyTools.Translate.StateManager.prototype.isEndBlock = function(token) {
-		// Pop if token.str is falsy or there is no this.current.state
+	'use strict';
+    // Pop if token.str is falsy or there is no this.current.state
 	return this.current.endBlock === token.str || !this.current.state;
 };
 
 RustyTools.Translate.StateManager.prototype.handleBypas = function(token) {
-	// The bypassIf or bypassIfNot may alter the current state.
+	'use strict';
+    // The bypassIf or bypassIfNot may alter the current state.
 
 	// this.current.state.bypassIf needs to be handled before the
 	// rest or the state options are processed.
+    var nextStateId;
 	if (nextStateId = this.getId_(this.current.state.bypassIf,
 				token.str, token.activeType)) {
 		this.jump(nextStateId);

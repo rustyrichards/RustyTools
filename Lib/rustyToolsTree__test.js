@@ -27,7 +27,7 @@ RustyTools.Tree.__test = function(t, r) {
 
 			// allDescendants should have testOBj, a, b, c, u, w, and y.
 			// It should not have d, v, and x
-			r.different(-1, matchedDescendants.indexOf(testObj)).
+			t.different(-1, matchedDescendants.indexOf(testObj)).
 					different(-1, matchedDescendants.indexOf(testObj.a)).
 					different(-1, matchedDescendants.indexOf(testObj.a.b)).
 					different(-1, matchedDescendants.indexOf(testObj.a.b.c)).
@@ -55,7 +55,7 @@ RustyTools.Tree.__test = function(t, r) {
 				});
 
 			// allNumbers should have testOBj, 1.1, 2.2 and 3.3 only.
-			r.different(-1, allNumbers.indexOf(1.1)).
+			t.different(-1, allNumbers.indexOf(1.1)).
 					different(-1, allNumbers.indexOf(2.2)).
 					different(-1, allNumbers.indexOf(3.3)).
 					same(3, allNumbers.length).
@@ -77,12 +77,12 @@ RustyTools.Tree.__test = function(t, r) {
 				});
 
 				// allElements better have a body.
-				r.not(0 === allElements.length).
+				t.not(0 === allElements.length).
 					different(-1, allElements.indexOf(self.document.body)).
 					logObjects(forJson);
 				} else {
 					// Need a web page to run this test.
-					r.is(self.document);
+					t.is(self.document);
 				}
 		},
 	]);

@@ -3,67 +3,58 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
+/*jshint globalstrict: true, eqnull: true, curly: false, latedef: true, newcap: true, undef: true, unused: true, strict: true, browser: true, devel: true*/
+/* global RustyTools, self */
+
+
 // The testers have a lot of tiny functons - use the whole script "use strict".
 "use strict";
 
-RustyTools.Testing.__test = function(t, r) {
-	var expr = new RegExp('[1-9][0-9]*', 'g');
-	// .Tester level RustyTools methods
-	t.test([
-		'RustyTools.Testing.__test\n' +
-		'RegExp.prototype.find',
-		function(t, r) {
-			var result = expr.find('abc');
-			r.is(result).same(result.length, 0);
-		},
-		function(t, r) {
-			var result = expr.find('123');
-			r.is(result).same(result.length, 1);
-		},
+RustyTools.Testing.__test = [
+	'RustyTools.Testing.__test\n' +
+	'RegExp.prototype.find',
+	function(t) {
+        // Given a RegExp with the added find
+        var exp = /[1-9][0-9]*/;
+        
+        // When
+        var match = exp.find('abc');
+        
+        // Then RustyTools.cfg.interval is set.
+		t.assert(function(){return 0 == match.length;});
+	},
+	function(t) {
+        // Given a RegExp with the added find
+        var exp = /[1-9][0-9]*/;
+        
+        // When
+        var match = exp.find('123');
+        
+        // Then RustyTools.cfg.interval is set.
+		t.assert(function(){return 1 == match.length;});
+	},
 
-		'Failure tests.  Make sure each kind of failure reports correctly\n' +
-		'RustyTools.Testing.Record.match failure',
-		function(t, r) {
-			// Fail match to report the error.
-			r.match(/^[\s\S]*$/, 'abc', 'bc').invertFailed();
-		},
-		'RustyTools.Testing.Record.exactMatch failure',
-		function(t, r) {
-			// Fail exactMatch to report the error.
-			r.exactMatch(/^[a-z]*/, 'abc1').invertFailed();
-		},
-		'RustyTools.Testing.Record.noMatch failure',
-		function(t, r) {
-			// Fail noMatch to report the error.
-			r.noMatch(/[a-z]+/i, 'abc').invertFailed();
-		},
-		'RustyTools.Testing.Record.same failure',
-		function(t, r) {
-			// Fail same to report the error.
-			r.same('abc', 'def').invertFailed();
-		},
-		'RustyTools.Testing.Record.different failure',
-		function(t, r) {
-			// Fail different to report the error.
-			r.different('abc', 'abc').invertFailed();
-		},
-		'RustyTools.Testing.Record.not failure',
-		function(t, r) {
-			// Fail not to report the error.
-			r.not(true).invertFailed();
-		}
-	]);
-};
+	'Failure tests.  Make sure each kind of failure reports correctly\n' +
+	'RustyTools.Testing.Record.match failure',
+	function(t) {
+        // Given RustyTools.Testing
+        
+        // When a test fails
+        t.assert(false);
+        
+        // Then invertPassed will make it pass; however, the color of the failed test output remains.
+		t.invertPassed();
+	},
+];
 
 function doTests() {
-	var tester = new RustyTools.Testing({name: "__test"});
-	tester.testAll();
+	var tester = new RustyTools.Testing();
+	tester.configure({name: "__test"}).testAll();
 
 	var testArray = {__test: [
 		'Array of test functions.',
-		function(t, r) {r.same(1-1, 0);},
-		function(t, r) {r.same(1+0, 1);},
-		function(t, r) {r.same(1+1, 2);}
+		function(t) {t.assert(true);},
+		function(t) {t.assert(1);},
 	]};
 
 	if (self.document) {
@@ -71,12 +62,7 @@ function doTests() {
 			tester.buildDom(
 				'<repl:allResults><div class="testFrame <repl:resultType/>"><h1>' +
 				'<repl:resultType/> - <repl:resultCount/></h1><repl:results>' +
-					'<div class="description"><repl:description/></div>'+
-					'<div class="test"><repl:test/>'+
-						'<div class="log"><repl:log/></div>'+
-						'<div class="error"><repl:error/></div>'+
-						'<div class="exception"><repl:exception/></div>'+
-					'</div>' +
+					'<div class="<repl:0/>"><repl:1/></div>'+
 				'</repl:results></div></repl:allResults>',
 					self.document.getElementById('report')
 			);
@@ -97,11 +83,12 @@ function doTests() {
 		tester.testAll(testArray);
 		RustyTools.log(tester.toJson());
 	}
-};
+}
 
 function hasNeededTestObjects() {
-	return RustyTools && RustyTools.Fn && RustyTools.Str && RustyTools.Testing && RustyTools.Tree &&
-			RustyTools.__test && RustyTools.Fn.__test && RustyTools.Str.__test && RustyTools.Testing.__test;
+	return RustyTools && RustyTools.Testing && RustyTools.__test && RustyTools.Testing.__test;
+//    return RustyTools && RustyTools.Fn && RustyTools.Str && RustyTools.Testing && RustyTools.Tree &&
+//			RustyTools.__test && RustyTools.Fn.__test && RustyTools.Str.__test && RustyTools.Testing.__test;
 }
 
 // When everything is loaded start the tests!

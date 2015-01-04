@@ -2,15 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/*jshint    eqnull: true, curly: false, latedef: true, newcap: true, undef: true, unused: true, strict: true, browser: true, devel: true*/
+/* global RustyTools, self */
 
-RustyTools.configure({
-	matchFail: '<repl:regex/>.find(<repl:source/>)\n\t==\n<repl:match/>\n\tnot\n<repl:shouldMatch/>',
-	noMatchFail: '<repl:regex/>.find(<repl:source/>)\n\t==\n<repl:match/>',
-	sameFail: '<repl:1/>\n \tis not\n<repl:2/>',
-	differentFail: '<repl:1/>\n\tis\n<repl:2/>',
-	notFail: '<repl:val/>\n\t is not falsy.',
-	isFail: '<repl:val/>\n\t is not truthy.'
-});
+
+'object' === typeof self.RustyTools || (RustyTools = {});
 
 // This can't inherit from RegExp it gives the exception:
 //   TypeError: Method RegExp.prototype.exec called on incompatible receiver [object Object]
@@ -20,276 +16,203 @@ RegExp.prototype.find = function(str) {
 	return this.exec(str) || [];
 };
 
-RustyTools.Testing = function(config) {
+// Usage create aRustyTools.Testing or call clear call test with an objectr or list of objects
+// to test.  When the test is done the members "excepted", "failed", and "passed"
+RustyTools.Testing = function(opt_symbols, opt_importAs) {
 	"use strict";
-	// The default config test all named "test"
-	if (!RustyTools.cfg.testing) RustyTools.cfg.testing = {name: "test"};
-	this.cfg = RustyTools.cloneOneLevel(RustyTools.cfg.testing, config);
+
+	this.cfg = {
+		name: 'test',
+		matchFail: '<repl:1/>.find(<repl:2/>)\n\t==\n<repl:3/>\n\tnot\n<repl:4/>',
+		matchCompleteFail: '<repl:1/>.find(<repl:2/>)\n\t[]',
+		noMatchFail: '<repl:1/>.find(<repl:2/>)\n\t==\n<repl:3/>',
+		sameFail: '<repl:1/>\n \tis not\n<repl:2/>',
+		differentFail: '<repl:1/>\n\tis\n<repl:2/>',
+		notFail: '<repl:val/>\n\t is not falsy.',
+		isFail: '<repl:val/>\n\t is not truthy.',
+	};
+    
+	this.clear(opt_symbols, opt_importAs);
 };
 
-// RustyTools.Testing.Record  is not a singleton.  These are created for each test.
-RustyTools.Testing.Record = function(description, test) {
-	"use strict";
-	this.description = description;
-	this.test = test;
-	this.error = '';
-	this.log = '';
+RustyTools.Testing.flags = {
+    title: "title",
+    success: "success",
+    information: "info",
+    error: "fail",
+    warning: "warn",
+    exception: "exception",
 };
 
-RustyTools.Testing.Record.prototype.errorIf = function(obj) {
+RustyTools.Testing.Data = function() {
 	"use strict";
-	if (this.error) this.error += '\n\n';
 
-	this.error += RustyTools.Str.toString(obj);
+	this.excepted = [];
+	this.failed = [];
+	this.passed = [];
 };
 
-RustyTools.Testing.Record.prototype.addError = function(str /* objects */) {
+RustyTools.Testing.prototype.configure = function(/* objs */) {
 	"use strict";
-	if (this.error) this.error += '\n\n';
-	this.error += RustyTools.Str.mulitReplaceCleanup(RustyTools.Str.multiReplace(
-			str, Array.prototype.slice.call(arguments, 1), 'none' /*don't entitize here*/));
+    if (!this.cfg) this.cfg = {};
+    this.cfg.addOneLevel(Array.prototype.slice.call(arguments));
+
+	// for chaining
+	return this;
 };
 
-RustyTools.Testing.Record.prototype.addException = function(e) {
+RustyTools.Testing.prototype.clear = function(opt_symbols, opt_importAs) {
 	"use strict";
-	if (this.exception) this.exception += '\n' + e.toString();
-	else this.exception = e.toString();
+	this.testPassed = true;
+	this.testSuppressed = false;
+	this.currentTest = null;
+	this.titleString = '';
+
+	this.data = new RustyTools.Testing.Data();
+
+	// Note:  The smybols will not be saved by toJson
+	this.symbols = new RustyTools.SymbolTable(opt_symbols, opt_importAs);
+
+	// for chaining
+	return this;
 };
 
-RustyTools.Testing.Record.prototype.logObjects = function() {
+RustyTools.Testing.prototype.beforeTest_ = function() {
 	"use strict";
-	for (var i=0; i<arguments.length; i++) {
-		var arg = arguments[i];
-		if (!this.log) this.log += '\n\n';
+	this.testPassed = true;
+	this.currentTest = [RustyTools.Testing.flags.title, this.titleString || ''];
 
-		if ('string' === typeof arg) {
-			this.log += arg;
+	// for chaining
+	return this;
+};
+
+RustyTools.Testing.prototype.afterTest_ = function() {
+	"use strict";
+	var dest = (this.testPassed || this.testSuppressed) ? this.data.passed : this.data.failed;
+	// Put a null between each report.
+	if (dest.length) dest.push(null);
+
+	if (this.testPassed) {
+        this.data.passed = dest.concat(this.currentTest);
+    } else {
+        this.data.failed = dest.concat(this.currentTest);
+	}
+    dest.push(null);
+
+	this.currentTest = null;
+
+	// for chaining
+	return this;
+};
+
+RustyTools.Testing.prototype.exceptedTest_ = function(testFn, e) {
+	"use strict";
+	// Put a null between each report.
+	if (this.data.excepted.length) this.data.excepted.push(null);
+    
+    this.currentTest.push(RustyTools.Testing.flags.information, testFn ? testFn.toString() : '',
+            RustyTools.Testing.flags.exception, e.message);
+
+	this.data.excepted = this.data.excepted.concat(this.currentTest);
+	this.currentTest = null;
+
+	// for chaining
+	return this;
+};
+
+RustyTools.Testing.prototype.test = function(tests) {
+	"use strict";
+	if (!tests.reduce) tests = [tests];
+	tests.reduce(function(context, testFn) {
+		if ('string' === typeof testFn) {
+			// Here it is a title not a function.
+			context.titleString = testFn;
 		} else {
-			this.log += JSON.stringify(arg);
-		}
-	}
-};
-
-/**
- * invertFailed - invert the "failed" flag.  This just exist for testing the
- * test cases.  (Cause a "failed", then use invertFailed so it reports as success.)
- */
-RustyTools.Testing.Record.prototype.invertFailed = function() {
-	"use strict";
-	this.failed = !this.failed;
-
-	return this;  // For chaining the tests.
-};
-
-/**
- * Tester functions that will write into Record.
- */
-RustyTools.Testing.Record.prototype.match = function(expr, str, opt_match) {
-	"use strict";
-	this.tested = true;
-	var found = expr.find(str);
-	// If opt_match is supplied make sure is is the same as the full find result.
-	// If opt-match is not supplied just make sure that something was found.
-	if ((opt_match) ? (opt_match !== found[0]) : !found.length) {
-		this.addError(RustyTools.cfg.matchFail, {regex: expr.toString(),
-				source: str, match: found[0],shouldMatch:opt_match});
-		this.failed = true;
-	}
-
-	return this;  // For chaining the tests.
-};
-
-RustyTools.Testing.Record.prototype.exactMatch = function(expr, str) {
-	"use strict";
-	return this.match(expr, str, str);
-	// Because match chains exactMatch chains
-};
-
-RustyTools.Testing.Record.prototype.noMatch = function(expr, str) {
-	"use strict";
-	this.tested = true;
-	var found = expr.find(str);
-	if (found.length) {
-		this.addError(RustyTools.cfg.noMatchFail,  {regex: expr.toString(),
-				source: str, match: found[0]});
-		this.failed = true;
-	}
-
-	return this;  // For chaining the tests.
-};
-
-RustyTools.Testing.Record.prototype.same = function(a, b) {
-	"use strict";
-	this.tested = true;
-	var different = false;
-	if (a && ('string' !== typeof a) && a.length && (a.length === b.length)) {
-		// a[i] != b[i]- want the type coercion here
-		for (var i=0; !different && i<a.length; i++) different = a[i] != b[i];
-	} else {
-		// a != b - want the type coercion here
-		different = a != b;
-	}
-	if (different) {
-		this.addError(RustyTools.cfg.sameFail, {1: a, 2: b});
-		this.failed = true;
-	}
-
-	return this;  // For chaining the tests.
-};
-
-RustyTools.Testing.Record.prototype.different = function(a, b) {
-	"use strict";
-	this.tested = true;
-
-	var same = false;
-	if (a && ('string' !== typeof a) && a.length && (a.length === b.length)) {
-		same = true;
-		// a[i] == b[i]- want the type coercion here
-		for (var i=0; !same && i<a.length; i++) same = a[i] == b[i];
-	} else {
-		// a == b - want the type coercion here
-		same = a == b;
-	}
-	if (same) {
-		this.addError(RustyTools.cfg.differentFail, {1: a, 2: b}, true);
-		this.failed = true;
-	}
-
-	return this;  // For chaining the tests.
-};
-
-RustyTools.Testing.Record.prototype.not = function(a) {
-	"use strict";
-	this.tested = true;
-	if (a) {
-		this.addError(RustyTools.cfg.notFail, {val: a});
-		this.failed = true;
-	}
-
-	return this;  // For chaining the tests.
-};
-
-RustyTools.Testing.Record.prototype.is = function(a) {
-	"use strict";
-	this.tested = true;
-	if (!a) {
-		this.addError(RustyTools.cfg.isFail, {val: a});
-		this.failed = true;
-	}
-
-	return this;  // For chaining the tests.
-};
-
-
-// Only one data object for each RustyTools.Testing
-RustyTools.Testing.prototype.data = {
-	excepted : [],
-	failed: [],
-	passed: [],
-
-	reset: function() {
-		"use strict";
-		this.excepted = [];
-		this.failed = [];
-		this.passed = [];
-	}
-};
-
-RustyTools.Testing.prototype.reset =function() {
-	"use strict";
-	this.data.reset();
-};
-
-RustyTools.Testing.prototype.recordTestResults = function(testItem) {
-	"use strict";
-	if (testItem[this.cfg.name] &&
-			'function' === typeof testItem[this.cfg.name]) {
-		testItem = testItem[this.cfg.name];
-	}
-	var record = new RustyTools.Testing.Record(this.currentDescription,
-			testItem.toString());
-	try {
-		testItem(this, record);
-		if (record.tested) {
-			delete record.tested;
-			if (!record.failed) {
-				this.data.passed.push(record);
-			} else {
-				delete record.failed;
-				this.data.failed.push(record);
+			context.beforeTest_();
+			try {
+				testFn(context);
+				context.afterTest_();
+			} catch (e) {
+				context.exceptedTest_(testFn, e);
 			}
 		}
-	} catch (e) {
-		record.addException(e);
-		this.data.excepted.push(record);
-	}
+
+		return context;
+	}, this);
+
+	// for chaining
+	return this;
+}
+
+/**
+ * invertPassed - invert the "failed" flag.  This just exist for testing the
+ * test cases.  (Cause a "failed", then use invertFailed so it reports as success.)
+ */
+RustyTools.Testing.prototype.invertPassed = function() {
+	"use strict";
+	this.testPassed = !this.testPassed;
+
+	// for chaining
 	return this;
 };
 
-RustyTools.Testing.prototype.test = function(toTest, opt_recursiveCall) {
+RustyTools.Testing.prototype.suppressTest = function() {
 	"use strict";
-	// Backup "self" so it can be stubbed for testing
-	var oldSelf;
-	if (opt_recursiveCall) {
-		oldSelf = self;
-		self = RustyTools.wrapObject(self);
-	}
+	this.testSuppressed = true;
+    
+    this.currentTest.push(RustyTools.Testing.flags.warning, "Test suppressed.");
 
-	if (toTest) {
-		var type = typeof toTest;
-		switch (type) {
-			case 'string':
-				// If it is a string just set the description.
-				this.currentDescription = toTest;
-				break;
-			case 'function':
-				// One function - test it.
-				this.recordTestResults(toTest);
-				break;
-			case 'object':
-				if (toTest[this.cfg.name] &&
-						'function' === typeof toTest[this.cfg.name]) {
-					// Use the test method!
-					this.testOneFunction(toTest[this.cfg.name]);
-				} else {
-					// A hash or an array; either way test all its members.
-					for (var key in toTest) {
-						this.test(toTest[key], true);
-					}
-				}
-		}
-	}
-
-	if (opt_recursiveCall) {
-		// Restore the old "self"
-		self = oldSelf;
-	}
-
+	// for chaining
 	return this;
 };
 
-RustyTools.Testing.prototype.isTestable = function(obj) {
+RustyTools.Testing.prototype.message = function(message, opt_type) {
 	"use strict";
-	return (obj && obj.hasOwnProperty && obj.hasOwnProperty(this.cfg.name) &&
-				(('function' === typeof obj[this.cfg.name]) ||
-				Array.isArray(obj[this.cfg.name])));
+    if (!opt_type) opt_type = RustyTools.Testing.flags.information;
+    this.currentTest.push(opt_type, message);
+}
+
+RustyTools.Testing.prototype.assert = function(a) {
+	"use strict";
+    
+    var output = RustyTools.Str.entitize(a.toString(), true);
+    var success = true;
+    if ('function' === typeof a) {
+        // strip the function parts.
+        output = RustyTools.Str.entitize(a.toString().replace(
+            /function\s*\([^\)]*\)\s*{(?:\s*return)?\s*([\s\S]*)\s*}s*$/, '$1'),
+            true);
+        success = a();
+    } else if ('string' === typeof a) {
+        success = eval(a);
+    } else {
+        success = a;
+    }
+    
+    this.currentTest.push(success ? RustyTools.Testing.flags.success : RustyTools.Testing.flags.error, output);
+	if (!success) this.testPassed = success;
+
+    // for chaining
+	return this;
 };
 
-RustyTools.Testing.prototype.testAllInternal_ = function(parentObj) {
-	"use strict";
-	var objsToTest = RustyTools.Tree.findMatchingDescendants(parentObj, this.isTestable.bind(this),
-			function(obj) {
-				var childObjects = [];
-				for (var i in obj) {
-					if (obj.hasOwnProperty(i)) childObjects.push(obj[i]);
-				}
-				return childObjects;
-			});
 
-	for (var index=0; index<objsToTest.length; index++) {
-		this.test(objsToTest[index][this.cfg.name]);
+
+RustyTools.Testing.prototype.testInternal_ = function(checkTopLevel, obj) {
+	"use strict";
+	if (checkTopLevel && obj[this.cfg.name]) {
+		this.test(obj[this.cfg.name]);
+		this.testInternal_(false, obj);
+	} else {
+		RustyTools.forEachOwnProperty(obj, function(key, property, obj) {
+			if (property && property[this.cfg.name]) {
+				this.test(property[this.cfg.name]);
+				this.testInternal_(false, property);
+			}
+		}, this);
 	}
 
+	// for chaining
 	return this;
 };
 
@@ -303,11 +226,9 @@ RustyTools.Testing.prototype.testAll = function() {
 	"use strict";
 	var toTest = (arguments.length) ? arguments : [self];
 
-	// Each individuual call to this.testAllInternal_ takes in a new empty "visited".
-	// so in testAll(A, B, A) A would be testee twice.  (There are cases where this is wanted.
-	// It may be needed to be sure B does not alter A)  However, as it runs each test the
-	// "visited" vector is used to check for repeats.
-	for (var i=0; i<toTest.length; i++) this.testAllInternal_(toTest[i]);
+	for (var i=0; i<toTest.length; i++) this.testInternal_.call(this, true, toTest[i]);
+
+	// for chaining
 	return this;
 };
 
@@ -336,7 +257,7 @@ RustyTools.Testing.prototype.testAllWhenPassed = function(fnTest, retryDelay, fn
 RustyTools.Testing.prototype.testAllWhenAvailable = function(xpathOrJQuery /* retryDelay, fnCallAfterTest */) {
 	"use strict";
 	var params = Array.prototype.slice.call(arguments, 1);
-	params.unshift(function(){return RustyTools.isEnabled(xpathOrJQuery);});
+	params.unshift(function(){return document.isEnabled(xpathOrJQuery);});
 
 	this.testAllWhenPassed.apply(this, params);
 };
@@ -352,7 +273,10 @@ RustyTools.Testing.prototype.buildDom = function(template, opt_parentNode) {
 	// Use propertyWalk to make an array of objects for the data items.
 	var reports = RustyTools.Fn.propertyWalk(this.data, function(result, key, value) {
 		if (!result) result = [];
-		return result.concat({resultType: key, resultCount: value.length, results: value});
+        var count = value.length ? 1 : 0;   // No null separators could be 0 or 1 item.
+        var pos = value.length;
+        while (pos--) if (null === value[pos]) count++;
+		return result.concat({resultType: key, resultCount: count, results: value});
 	}, function(key, value) { return RustyTools.isArrayLike(value) && value.length;});
 
 	// Wrap the array of objects in an object for the multireplace.

@@ -2,6 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/*jshint    eqnull: true, curly: false, latedef: true, newcap: true, undef: true, unused: true, strict: true, browser: true, devel: true*/
+/* global RustyTools, self */
+
 
 'object' === typeof self.RustyTools || (RustyTools = {});
 
@@ -321,11 +324,11 @@ RustyTools.Str = {
 			var expr = new RegExp('\\s*\\b' + this.regExpEscape(arguments[i]));
 			output = output.replace(expr, '');
 		}
-		return output
+		return output;
 	},
 
 	// add classes
-	addClasses: function(str /*, className [, className ...] */) {
+	addClasses: function(/* str , className [, className ...] */) {
 		"use strict";
 		// Don't douplicate so remove then add.
 		var params = Array.prototype.slice.call(arguments, 0);
@@ -334,7 +337,7 @@ RustyTools.Str = {
 			if (output) output += ' ';
 			output += arguments[i];
 		}
-		return output
+		return output;
 	},
 
 	// toggle classes
@@ -352,12 +355,59 @@ RustyTools.Str = {
 				output += arguments[i];
 			}
 		}
-		return output
+		return output;
 	},
 
+	multiReplaceFlags: {
+		'encoding' : 1,
+		'whitespace' : 2,
+		'preserveNumbers' : 4
+	},
+
+	multiReplaceDefaultFlags: 3,
 
 	/*
-	 * multiReplace - replace the taga <repl:id>...</repl:id>, <repl:id/>, or <inc:id/> etc with the supplied
+	 * strMultiReplace - replace the tags <repl:N/>
+	 *
+	 *								You usually want to entitize the substituted strings so they
+	 *								will display correctly in HTML.  If you don't want this set
+	 *									opt_encoding = 'none'
+	 *								To preserve white space use:
+	 *									opt_encoding = 'pre'
+	 */
+	strMultiReplace: function(str, strArray, opt_multiReplaceFlags) {
+		"use strict";
+
+		// Replace null or undefined only!
+		if (opt_multiReplaceFlags == null) opt_multiReplaceFlags = this.multiReplaceDefaultFlags;
+		var keepWhitespace =  0 !== (opt_multiReplaceFlags & 2);
+		var encode =  0 !== (opt_multiReplaceFlags & 1);
+
+		var result = '';
+
+		// Outer loop; the array can contain more than one repetition of the template data.
+		var offset = 0;
+        
+        function replacer(match, index) {
+            var i = parseInt(index, 10);
+            if (lastUsed < i) lastUsed = i;
+            var val = strArray[offset+i];
+            val = RustyTools.Str.toString((val == null) ? '' : val);
+            if (encode) val = RustyTools.Str.entitize(val, keepWhitespace);
+            return val;
+        }
+		while (offset < strArray.length) {
+			var lastUsed = 0;
+			result += str.replace(/<repl:([^\/>]+)\/>/g, replacer);
+			offset += lastUsed + 1;
+			// Jump any null separators in the array.
+			while (offset < strArray.length && strArray[offset] == null) offset++;
+		}
+		return result;
+	},
+
+	/*
+	 * multiReplace - replace the tags <repl:id>...</repl:id>, <repl:id/>, or <inc:id/> etc with the supplied
 	 *                parameters. (The <inc:id should be numbers they will be post incremented.)
 	 *
 	 *                To allow for recursive substitution <-repl:id>...</-repl:id>, <-repl:id/> and <-inc:id/>
@@ -372,84 +422,99 @@ RustyTools.Str = {
 	 *								To preserve white space use:
 	 *									opt_encoding = 'pre'
 	 */
-	multiReplace: function(str, substObjs, opt_encoding, opt_doNotChangeSubst) {
+	multiReplace: function(str, substObj, opt_multiReplaceFlags) {
 		"use strict";
+
+		// Replace null or undefined only!
+		if (opt_multiReplaceFlags == null) opt_multiReplaceFlags = this.multiReplaceDefaultFlags;
 		var matches = {};
 		var result = str;
-		var i;
-		var j;
 
-		var keepWhitespace = 'pre' === opt_encoding;
-		var encode = 'none' !== opt_encoding;
+		var keepWhitespace =  0 !== (opt_multiReplaceFlags & 2);
+		var encode =  0 !== (opt_multiReplaceFlags & 1);
 
-		if (!Array.isArray(substObjs)) substObjs = [substObjs];
-		for (i=0; i<substObjs.length; i++) {
-			// We need to keep the source numbers as the substitutions may change the number values.
-			var substObj = substObjs[i];
-			if (opt_doNotChangeSubst) substObj = RustyTools.cloneOneLevel(substObj);
+		var isArray = Array.isArray(substObj);
+		// We need to keep the source numbers as the substitutions may change the number values.
+		if ( 0 !== (opt_multiReplaceFlags & 4)) substObj = RustyTools.cloneOneLevel(substObj);
 
-			// Order of replacement matters.
-			//  1) do the content matches
-			//  2) do the <repl: matches
-			//  3) do the <inc: matches
-			// This way any auto-incrementing numbers will happen accross the whole string.
+		// Order of replacement matters. The section KEY <repl:KEY[,KEY2]>...</repl>
+		// may be used within the section.  Do the non-section <repl:KEY/>
+		// substitutions first.
+		//  1) do the <repl:KEY/> and <inc:KEY/> matches
+        //  2) do the <repl:KEY[,KEY2]>...</repl> matches
+		// This way any auto-incrementing numbers will happen accross the whole string.
 
-			// Match <repl:ID>...</repl:ID>
-			var context = this;
-			var result = result.replace(/<repl:([^\/>]+)>([\s\S]*)<\/repl:\1>/g,
-				function(match, keys, content) {
-					var keys = keys.split(',')
-					for (j=0; j<keys.length; j++) {
-						var key = keys[j];
-						var substValue = substObj[key];
-						if (substValue != null) {
-							if (content) {
-								// Recursively call multireplace on the content
-								// Remove one level of - from <-*n
-								var adjContent = content.replace(/(<\/?)-(-*repl:)/g, '$1$2');
+		// Match <repl:ID>...</repl:ID>
+		var context = this;
+		// Match <repl:id/> or <inc:id/>
+		result = result.replace(/<(repl:|inc:)([^\/>]+)\/>/g,
+			function(match, symbol, key) {
+				var retVal = match;
+				if (null == substObj) {
+					// Output an emoty string
+					retVal = '';
+				} else if (typeof substObj != 'object' || substObj instanceof String) {
+					// if substObj is not an object, any key matches
+					retVal =  RustyTools.Str.toString(substObj);
+					if ('inc:' === symbol) substObj++;
+				} else if (key in substObj) {
+					if ('inc:' === symbol) {
+						retVal = RustyTools.Str.toString(substObj[key]++);
+					} else {
+						var val = substObj[key];
+						// Can't just rely on RustyTools.Str.toString member functions
+						// must be called from the appropriate object.
+						if ('function' === typeof val) val = substObj[key].call(substObj);
+						retVal =  RustyTools.Str.toString(val);
+					}
+					if (encode) retVal = RustyTools.Str.entitize(retVal,
+							keepWhitespace);
+				}
+				return retVal;
+			});
 
-								if (Array.isArray(substValue)) {
+		result = result.replace(/<repl:([^\/>]+)>([\s\S]*)<\/repl:\1>/g,
+			function(match, keysStr, content) {
+				var keys = keysStr.split(',');
+				for (var i=0; i<keys.length; i++) {
+					var key = (isArray) ? parseInt(keys[i], 10) : keys[i];
+					var substValue = substObj[key];
+					if (substValue != null) {
+						if (content) {
+							// Recursively call multireplace on the content
+							// Remove one level of - from <-*n
+							var adjContent = content.replace(/(<\/?)-(-*repl:)/g, '$1$2');
+
+							if (Array.isArray(substValue)) {
+								var first = substValue[0];
+								if (first != null && 'object' === typeof first) {
+									// Treat the array as objects and recurse on multiReplace
 									matches[key] = '';
 									for (var j=0; j<substValue.length; j++) {
 										matches[key] += context.multiReplace(adjContent,
-												substValue[j], opt_encoding, opt_doNotChangeSubst);
+												substValue[j], opt_multiReplaceFlags);
 									}
-								} else if (substValue instanceof Object) {
-									matches[key] = context.multiReplace(adjContent, substValue,
-											opt_encoding, opt_doNotChangeSubst);
+								} else {
+									// Treat the array as simple types or convertable to string
+									matches[key] = context.strMultiReplace(adjContent,
+											substValue, opt_multiReplaceFlags);
 								}
-							} else if (!matches[key]) {
-								matches[key] = RustyTools.Str.toString(substValue);
-								if (encode) matches[key] = RustyTools.Str.entitize(
-										matches[key], keepWhitespace);
+							} else if (substValue instanceof Object) {
+								matches[key] = context.multiReplace(adjContent, substValue,
+										opt_multiReplaceFlags);
 							}
+						} else if (!matches[key]) {
+							matches[key] = RustyTools.Str.toString(substValue);
+							if (encode) matches[key] = RustyTools.Str.entitize(
+									matches[key], keepWhitespace);
 						}
-						return (matches[key] == null) ? match : matches[key];
 					}
-				});
+					return (matches[key] == null) ? match : matches[key];
+				}
+			});
 
-			// Match <repl:id/> or <inc:id/>
-			result = result.replace(/<(repl:|inc:)([^\/>]+)\/>/g,
-				function(match, symbol, key) {
-					var retVal = match;
-					if (key in substObj) {
-						if ('inc:' === symbol) {
-							retVal = RustyTools.Str.toString(substObj[key]++);
-						} else {
-							var val = substObj[key];
-							// Can't just rely on RustyTools.Str.toString member functions
-							// must be called from the appropriate object.
-							if ('function' === typeof val) val = substObj[key].call(substObj);
-							retVal =  RustyTools.Str.toString(val);
-						}
-						if (encode) retVal = RustyTools.Str.entitize(retVal,
-								keepWhitespace);
-					}
-					return retVal;
-				});
-		}
 
-		return (result) ? result : str;
+		return result || str;
 	},
 
 	/*
@@ -477,11 +542,13 @@ RustyTools.Str = {
 	},
 
 	getQueryValues: function(key, opt_queryStr) {
+		"use strict";
 		var output = [];
 
 		if (!opt_queryStr) opt_queryStr = window.location.search;
 		var regEx = new RegExp("(?:\\?|&)" + RustyTools.Str.regExpEscape(key) +
 				"(?:=([^&]+))?", "ig");
+        var match;
 		while ((match = regEx.exec(opt_queryStr)) != null) {
 			if (match[0]) {
 				if (match[1]) {

@@ -3,233 +3,240 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
+/*jshint globalstrict: true, eqnull: true, curly: false, latedef: true, newcap: true, undef: true, unused: true, strict: true, browser: true, devel: true*/
+/* global RustyTools, self */   // self is the generic global it is "window" im aweb page, or the clobal in a web worker.
+                                // js hint should know this!
+
+
 // The testers have a lot of tiny functons - use the whole script "use strict".
 "use strict";
 
-RustyTools.__test = function(t, r) {
-	var RustyToolsTest = RustyTools.wrapObject(RustyTools);
+RustyTools.__test = [
+	'RustyTools  pre-test initialization and stubs',
+	function(t) {
+		t.symbols['RustyTools.cfg'] =  RustyTools.cfg  || null;
+		t.symbols['self.console'] =  self ? self.console : null;
+		t.symbols['console.log'] =  '';
 
-	// Make a new object in RustyToolsTest;
-	RustyToolsTest.cfg = {};
-	// Add all r.e members from RustyTools.cfg
-	RustyToolsTest.configure(RustyTools.cfg);
-
-	// Top level RustyTools methods
-	t.test([
-		'RustyTools.__test\n' +
-		'RustyTools.log',
-		function(t, r) {
-			// Stub out console.log so we can see the results
-			var resultString = '';
-			self.console = {log: function() {
-				for (var i=0; i<arguments.length; i++) {
-					resultString += arguments[i].toString(10) + '\n';
-				}
-			}};
-
-			RustyTools.log("One", "Two");
-			r.same(resultString, "One\nTwo\n");
-		},
-
-		'RustyTools.logException',
-		function(t, r) {
-			// RE-replace the console.log stub so that we have a new closure
-			// to a new resultString variable.
-			var resultString = '';
-			self.console = {log: function() {
-				for (var i=0; i<arguments.length; i++) {
-					resultString += arguments[i].toString(10) + '\n';
-				}
-			}};
-
-			try {
-				throw { name: "TestException",
-						message: "This exception was generated for testing."};
-			} catch (e) {RustyTools.logException(e);}
-
-			r.match(/^This exception was generated for testing\./, resultString,
-					'This exception was generated for testing.');
-		},
-
-		'RustyTools.createDomElement',
-		function(t, r) {
-			var div = RustyToolsTest.createDomElement({tag:'DIV', className: 'test', innerHTML:'one line'});
-			r.is(div).same('one line', div.innerHTML);
-		},
-
-		'RustyTools.configure && RustyTools.cloneOneLevel (configure calls cloneOneLevel)',
-		function(t, r) {
-			RustyToolsTest.configure({xTest: "string",
-			yTest: ['a', 'b', 3.3, false]});
-			r.same(RustyToolsTest.cfg.xTest, "string");
-		},
-		function(t, r) {r.same(RustyToolsTest.cfg.yTest[0], 'a');},
-		function(t, r) {r.same(RustyToolsTest.cfg.yTest[3], false);},
-		function(t, r) {
-			RustyToolsTest.configure({yTest: ['c', 'd']});
-			// yTest: should now be ['a', 'b', 3.3, false, 'c, 'd]
-			return r.same(RustyToolsTest.cfg.yTest[4], 'c');
-		},
-		function(t, r) {r.same(RustyToolsTest.cfg.yTest[2], 3.3);},
-
-		'RustyTools.wrapObject',
-		function(t, r) {
-			var base = {a: 1, b: "two"};
-			var obj = {inner: base};
-			var wrapped = RustyTools.wrapObject(obj);
-			r.same(wrapped.inner, obj.inner).is(wrapped.rustyToolsIsWrapped());
-		},
-
-		'RustyTools.wrapObject wrap 3 times',
-		function(t, r) {
-			var base = {a: 1, b: "two"};
-			var obj = {inner: base};
-			var wrapped1 = RustyTools.wrapObject(obj);
-			var wrapped2 = RustyTools.wrapObject(wrapped1);
-			var wrapped3 = RustyTools.wrapObject(wrapped2);
-			r.different(wrapped3, wrapped2).different(wrapped2, wrapped1).
-					different(wrapped1, obj);
-		},
-
-		'RustyTools.cloneOneLevel',
-		function(t, r) {
-			// Test the object merging
-			var clone = RustyTools.cloneOneLevel({a: 1, c:3}, {b:2, d:'last'});
-
-			var cloneKeys = Object.keys(clone).sort();
-
-			r.same(clone.a, 1).same(clone.b, 2).same(clone.c, 3).
-				same(clone.d, 'last').same(cloneKeys, ['a', 'b', 'c', 'd']);
-		},
-
-		function(t, r) {
-			// Test that the clone is no longer the same as the source.
-			var source = {a:'one', b:2.2};
-			var clone = RustyTools.cloneOneLevel(source);
-
-			// Changing a str or number in shource should not change clone.
-			source.a = 'two';
-			source.b = 3.14159;
-
-			r.different(clone.a, source.a).different(clone.b, source.b).
-				same(clone.a, 'one').same(clone.b, 2.2);
-		},
-
-		'RustyTools.constantWrapper',
-		function(t, r) {
-			// Make an constantWrapper, and check that it handles known and unknown keys.
-			var source = {a:'one', b:2.2};
-			var wrapper = RustyTools.constantWrapper(source);
-
-			// Changing a str or number in shource should not change constantWrapper.
-			source.b = "two";
-			r.same(wrapper('a'), 'one').same(wrapper('b'), 2.2).not(wrapper('c'));
-		},
-
-		'RustyTools.constantWrapper - subclass',
-		function(t, r) {
-			// Make an constantWrapper, and check that it handles known and unknown keys.
-			var source = {a:'one', b:2.2};
-			var wrapper = RustyTools.constantWrapper(source);
-			wrapper = wrapper.subclass({a:'1', c:'three'})
-
-			// Changing a str or number in shource should not change constantWrapper.
-			source.b = "two";
-			r.same(wrapper('a'), 1).same(wrapper('b'), 2.2).same(wrapper('c'), 'three');
-		},
-
-		'RustyTools.simpleObjCopy',
-		function(t, r) {
-			// Only the numbers, booleans and strings should copy
-			var source = {a: 1.1,
-					b: true,
-					c: 'test',
-					d: {x: 1, y: 2},
-					e: function(x) {return x;},
-					f: true
+        // Stub out self.clonsole.log to wtite to t.symbols['console.log']
+        if (!self) self = {};
+		self.console = {log: function() {
+			for (var i=0; i<arguments.length; i++) {
+				t.symbols['console.log'] += arguments[i].toString(10) + '\n';
 			}
-			var clone = RustyTools.simpleObjCopy(source);
+		}};
+        
+        t.suppressTest(); // Initialization is not a test
+    },
+    
+	'RustyTools.cfg',
+	function(t) {
+        // Given RustyTools && RustyTools.cfg
+        
+        // When RustyTools is constructed.
+        
+        // Then RustyTools.cfg.interval is set.
+		t.assert(function(){return 'number' == typeof RustyTools.cfg.interval;});
+	},  
 
-			r.same(clone.a, source.a).same(clone.b, source.b).same(clone.c, source.c).
-				not(clone.d).not(clone.e);
-		},
+	'RustyTools.disallow',
+	function(t) {
+        // Given RustyTools && RustyTools.disallow
+        
+        // When RustyTools.disallow is called it alway returns false
+        
+        // Then RustyTools.cfg.interval is set.
+		t.assert(function(){return false == RustyTools.disallow();});
+	},  
 
-		'RustyTools.isArrayLike',
-		function(t, r) {
-			r.not(RustyTools.isArrayLike(1.1)).					// number is not array like
-				not(RustyTools.isArrayLike('test')).			// string explicitly excluded
-				not(RustyTools.isArrayLike({length: 'foo'})).	// property length is not a number
-				is(RustyTools.isArrayLike(arguments)).		// arguments is array like
-				is(RustyTools.isArrayLike([]));				// empty array is array like
-		},
+	'RustyTools.log',
+	function(t) {
+        // Given RustyTools && RustyTools.log && console.log is stubbed
+        // to write to t.symbols['console.log']
+        t.symbols['console.log'] = '';
 
-		'RustyTools.getUri',
-		function(t, r) {
-			if (self.document) {
-				var uri = RustyTools.getUri('RustyTools.__test');
-				// Find this script and make sure the paths match.
-				var scripts = self.document.getElementsByTagName('script');
-				var scriptSrc = '';
-				var i = scripts.length;
-				while (scriptSrc !== uri && i--) scriptSrc = scripts[i].src;
+        // When
+		RustyTools.log("One", "Two");
+        
+        // Then
+		t.assert(function(){return t.symbols['console.log']  == 'One\nTwo\n';});
+	}, 
 
-				r.same(scriptSrc, uri);
-			} else {
-				// No window.document, can't run this test!
-				r.is(self.document);
-			}
-		},
+	'RustyTools.logError',
+	function(t) {
+        // Given RustyTools && RustyTools.log  && RustyTools.logException && console.log is stubbed
+        // to write to t.symbols['console.log']
+        t.symbols['console.log'] = '';
 
-		'RustyTools.getUri, and RustyTools.load',
-		function(t, r) {
-			var loading  = RustyTools.load(null, "RustyTools.Empty",
-				function() {
-					// This was an asyncronous callback, so run .test to test and show the results.
-					t.test([
-						'RustyTools.load callback',
-						function(t, r) {
-							// RustyTools.Empty should have loaded.
-							// Check this by looking for a false return from RustyTools.load
-							r.not(RustyTools.load(null, "RustyTools.Empty"));
-						}
-					]);
-				});
+		// When
+        try {
+			throw { name: "TestException",
+					message: "This exception was generated for testing."};
+		} catch (e) {RustyTools.logError(e);}
 
-			// Loading should be true.
-			r.is(loading);
-		},
+        // Then
+        t.assert(function(){return 'This exception was generated for testing' == t.symbols['console.log'].split('.')[0];});
+	},
 
-		'RustyTools.pathToMember',
-		function(t, r) {
-			// Array.prototype.slice better exist!
-			var slice = RustyTools.pathToMember("Array.prototype.slice");
+	'RustyTools.log - works on exceptions too',
+	function(t) {
+        // Given RustyTools && RustyTools.log  && RustyTools.logException && console.log is stubbed
+        // to write to t.symbols['console.log']
+        t.symbols['console.log'] = '';
 
-			// RustyTools.pathToMember
-			var pathToMember = RustyTools.pathToMember("pathToMember", RustyTools);
+		// When
+        try {
+            var err = new Error();
+            err.name = "TestException2";
+            err.message = "This exception was also generated for testing.";
+            throw err;
+		} catch (e) {RustyTools.log(e);}
 
-			// RustyTools.xxx does not exist
-			var xxx = RustyTools.pathToMember("RustyTools.xxx");
+        // Then
+        t.assert(function(){return 'This exception was also generated for testing' == t.symbols['console.log'].split('.')[0];});
+	},
 
-			r.same('function', typeof slice).same('function', typeof pathToMember).
-					not(xxx);
-		},
+	'RustyTools.configure',
+	function(t) {
+        // Given RustyTools && RustyTools.configure
 
-		'RustyTools.isEnabled',
-		function(t, r) {
-			// Checking the id=report should always work
-			r.is(RustyTools.isEnabled('#report'));
-		},
-		function(t, r) {
-			// This will fail in I.E.  I.E. does not have the xpath "evaluate"
+        // When
+        RustyTools.configure({a:1, b:2, c:{}}, {x:'test', y:[1,2,3]});
+        
+        // Then RustyTools.cfg -> .a .b and .x should be set.  .c and .y should not
+        // .interval should still be set
+        t.assert(function(){return RustyTools.cfg.a == 1 && RustyTools.cfg.b == 2 && RustyTools.cfg.x == 'test';}).
+                assert(function(){return null == RustyTools.cfg.c && null == RustyTools.cfg.y;}).
+                assert(function(){return 'number' == typeof RustyTools.cfg.interval;});
+	},
 
-			// Xpath to the first div.
-			r.is(RustyTools.isEnabled('//div'));
-		},
-		function(t, r) {
-			// NOTE:  This will fail if jquery, or some other $ implementatuion is not loaded.
-			// search by class.
-			r.is(RustyTools.isEnabled('.report-style'));
-		}
-	]);
-};
+	'RustyTools.isArrayLike',
+	function(t) {
+        // Given RustyTools && RustyTools.isArrayLike
 
+        // When used to test objects
+        var argsCopy = arguments;
+        
+        // Then
+        t.assert(function(){return RustyTools.isArrayLike(argsCopy);}).
+                assert(function(){return RustyTools.isArrayLike([1,2]);}).
+                assert(function(){return !RustyTools.isArrayLike('test');});
+	},
+
+	'RustyTools.pathToMember',
+	function(t) {
+        // Given RustyTools && RustyTools.pathToMember
+        
+        // When
+        var member = RustyTools.pathToMember("RustyTools.cfg.rustyToolsScriptPath");
+        
+        // Then
+        t.assert(function(){return 'string' == typeof member;});
+	},
+
+	'RustyTools.getUri',
+	function(t) {
+        // Given RustyTools && RustyTools.getUri
+
+        // When used to test objects
+        var realUrl = RustyTools.getUri("RustyTools.obj");
+        var fakeUrl = RustyTools.getUri("One.two.Three", "https://fake.com/");
+        
+        // Then
+        t.assert(function(){return realUrl.replace(/^.*\//, '') === 'rustyToolsObj.js';}).
+                assert(function(){return fakeUrl === 'https://fake.com/oneTwoThree.js';});
+	},
+
+	'RustyTools.load - load RustyTools.Empty',
+	function(t) {
+        // Given RustyTools && RustyTools.load
+        
+        // When RustyTools.Empty is loaded
+		var loading  = RustyTools.load("RustyTools.Empty",
+			function() {
+				// This was an asyncronous callback, so run .test to test and show the results.
+				t.test([
+					'RustyTools.load callback',
+					function(t) {
+                        // Given the load of RustyTools.Empty has finished
+                        
+                        // When the load is complete
+                        
+                        // Then
+                        t.assert(function(){return 'object' == typeof RustyTools.Empty;});
+					}
+				]);
+			});
+
+		// Then loading should be true until the load is completed.
+		t.assert(function(){return loading;});
+	},
+    
+	'RustyTools.loadInOrder',
+	function(t) {
+        // Given RustyTools && RustyTools.loadInOrder
+        
+        // When
+        var loadCount = 0;
+		RustyTools.loadInOrder(function() {
+				// This was an asyncronous callback, so run .test to test and show the results.
+				t.test([
+					'RustyTools.loadOrder callback',
+					function(t) {
+                        // Given the load of RustyTools.Empty has finished
+                        
+                        // When
+                        t.message("loadInOrder count:  " + ++loadCount);
+                        
+                        // Then the RustyTools.loadOrder looks like 1, 2 ... loasCount
+                        t.assert(function() {
+                            var matched = true;
+                            for (var index = 0; index < loadCount; index++) {
+                                matched = matched || index + 1 == RustyTools.loadOrder[index];
+                            }
+                            return matched;
+                        });
+					}
+				]);
+			}, "RustyTools.loadOrder1", "RustyTools.loadOrder2", "RustyTools.loadOrder3");
+
+		// Then this test ends before loading starts
+		t.assert(function(){return 0 === loadCount;});
+	},
+    
+    'RustyTools.waitForCondition',
+    function(t) {
+        // Given RustyTools && RustyTools.load
+        
+        // When
+        var ready = false;
+        RustyTools.waitForCondition(function() {return ready;},
+                function() {
+                    // This was an asyncronous callback, so run .test to test and show the results.
+                    t.test([
+                        'RustyTools.waitForCondition callback',
+                        function(t) {
+                            // Given RustyTools.waitForCondition is complete
+
+                            // When ready is true
+
+                            // Then
+                            t.assert(function(){return true === ready;});
+                        }
+                    ]);
+        });
+
+        self.setTimeout(function() {ready = true;}, 200);
+		t.assert(function(){return false === ready;});
+	},
+
+	'RustyTools  post-test cleanup',
+	function(t) {
+		RustyTools.cfg = t.symbols['RustyTools.cfg'];
+		self.console = t.symbols['self.console'];
+        
+        delete RustyTools.loadOrder;
+
+        t.suppressTest(); // Initialization is not a test
+    },
+];

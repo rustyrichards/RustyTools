@@ -55,10 +55,10 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 			}, errors);
 			tokens.forEach(function(token) {
 				if (token.isTestable) {
-					r.logObjects(token.str + '\t\t' + ((token.state) ? (token.state.id || 'NONE') : 'UNDEFINED') + '\t\t' + token.getCombindedClass() + '\n');
+					t.logObjects(token.str + '\t\t' + ((token.state) ? (token.state.id || 'NONE') : 'UNDEFINED') + '\t\t' + token.getCombindedClass() + '\n');
 				}
 			})
-			r.same(6, errors.length).same(';', errors[0].str).same('=', errors[1].str).
+			t.same(6, errors.length).same(';', errors[0].str).same('=', errors[1].str).
 					same('+', errors[2].str).same('y', errors[3].str).
 					same('qq', errors[4].str).same('}', errors[5].str);
 		},
@@ -66,8 +66,8 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 		'editControl.parseForEditor',
 		function(t,r) {
 			outStr = editControl.parseForEditor(tokens);
-			r.logObjects(outStr);
-			r.same(source, RustyTools.Str.markupToPlainText(outStr, true));
+			t.logObjects(outStr);
+			t.same(source, RustyTools.Str.markupToPlainText(outStr, true));
 		},
 
 		'editControl.buildSpliceDifference',
@@ -81,7 +81,7 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 					editControl.revertTokens(tokens2, revertSplice));
 			// Check that the plain text of the outStr, and outStr2 are different.
 			// Check that the revertTokens restores the old plain text.
-			r.different(RustyTools.Str.markupToPlainText(outStr2, true),
+			t.different(RustyTools.Str.markupToPlainText(outStr2, true),
 				RustyTools.Str.markupToPlainText(outStr, true)).
 				same(RustyTools.Str.markupToPlainText(reverted, true),
 				RustyTools.Str.markupToPlainText(outStr, true));
@@ -97,7 +97,7 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 '			,,'].join('\n');
 			var tokens = parseTokens(test);
 			var errors = getErrorTokens(tokens);
-			r.not(errors.length);
+			t.not(errors.length);
 		},
 		'statement {...}',
 		function(t,r) {
@@ -110,7 +110,7 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 					return result;
 				}, []);
 			var countsShouldBe = [0, 1, 1, 1, 2, 2, 1, 0, -1];
-			r.same(countsShouldBe, counts).is(tokens[tokens.length-1].error);
+			t.same(countsShouldBe, counts).is(tokens[tokens.length-1].error);
 		},
 		'statement do ... while',
 		function(t,r) {
@@ -121,7 +121,7 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 '				do {} } while ( self );				// bad'].join('\n');
 			var tokens = parseTokens(test);
 			var errors = getErrorTokens(tokens);
-			r.same('}', errors[0].str).same(-1, errors[0].groupingCount);
+			t.same('}', errors[0].str).same(-1, errors[0].groupingCount);
 		},
 		'statement function',
 		function(t,r) {
@@ -132,7 +132,7 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 '				function fName() {return self;}'].join('\n');
 			var tokens = parseTokens(test);
 			var errors = getErrorTokens(tokens);
-			r.not(errors.length);
+			t.not(errors.length);
 		},
 		'statement switch',
 		function(t,r) {
@@ -153,7 +153,7 @@ javaScriptSyntaxCheck.__test = function(t, r) {
 '				case'].join('\n');
 			var tokens = parseTokens(test);
 			var errors = getErrorTokens(tokens);
-			r.same(1, errors.length);
+			t.same(1, errors.length);
 		}
 	]);
 };
@@ -183,11 +183,11 @@ var html = tester.buildDom(
 	'<body>' +
 	'<repl:allResults><div class="testFrame <repl:resultType/>"><h1>' +
 	'<repl:resultType/> - <repl:resultCount/></h1><repl:results>' +
-		'<div class="description"><repl:description/></div>'+
-		'<div class="test"><repl:test/>'+
-			'<div class="log"><repl:log/></div>'+
-			'<div class="error"><repl:error/></div>'+
-			'<div class="exception"><repl:exception/></div>'+
+		'<div class="description"><repl:0/></div>'+
+		'<div class="test"><repl:1/>'+
+			'<div class="log"><repl:2/></div>'+
+			'<div class="error"><repl:3/></div>'+
+			'<div class="exception"><repl:4/></div>'+
 		'</div>' +
 	'</repl:results></div></repl:allResults>' +
 	'</body>' +

@@ -2,12 +2,17 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/*jshint    eqnull: true, curly: false, latedef: true, newcap: true, undef: true, unused: true, strict: true, browser: true, devel: true*/
+/* global RustyTools, self */
+
+
+'object' === typeof self.RustyTools || (RustyTools = {});
+
 
 // SymbolTable Tree support
 
 /*
 Symbol table types - Just use the string because that makes it constant
-Using RustyTools.constantWrapper would make it harder to optomize the lookups:
 	'-function'
 	'-global'
 	'-parameter'
@@ -47,6 +52,7 @@ RustyTools.SymbolTable = function(opt_otherSymbolTable, opt_importAs) {
 };
 
 RustyTools.SymbolTable.prototype.set = function(key, value) {
+	"use strict";
 	this.current['-' + key] = value;
 
 	// For chaining
@@ -54,10 +60,20 @@ RustyTools.SymbolTable.prototype.set = function(key, value) {
 };
 
 RustyTools.SymbolTable.prototype.get = function(key) {
+	"use strict";
 	return this.current['-' + key];
 };
 
+RustyTools.SymbolTable.prototype.clear = function(key) {
+	"use strict";
+	delete this.current['-' + key];
+
+	// For chaining
+	return this;
+};
+
 RustyTools.SymbolTable.prototype.setGlobal = function(key, value) {
+	"use strict";
 	this.root['-' + key] = value;
 
 	// For chaining
@@ -65,10 +81,20 @@ RustyTools.SymbolTable.prototype.setGlobal = function(key, value) {
 };
 
 RustyTools.SymbolTable.prototype.getGlobal = function(key) {
+	"use strict";
 	return this.root['-' + key];
 };
 
+RustyTools.SymbolTable.prototype.clearGlobal = function(key) {
+	"use strict";
+	delete this.root['-' + key];
+
+	// For chaining
+	return this;
+};
+
 RustyTools.SymbolTable.prototype.push = function() {
+	"use strict";
 	this.current = RustyTools.wrapObject(this.current);
 
 	// For chaining
@@ -76,6 +102,7 @@ RustyTools.SymbolTable.prototype.push = function() {
 };
 
 RustyTools.SymbolTable.prototype.pop = function() {
+	"use strict";
 	if (this.current !== this.root) {
 		this.current = Object.getPrototypeOf(this.current);
 	}
@@ -86,6 +113,7 @@ RustyTools.SymbolTable.prototype.pop = function() {
 
 // depth is not fast, but it should not be needed much.
 RustyTools.SymbolTable.prototype.depth = function() {
+	"use strict";
 	var depth = 0;
 	var runner = this.current;
 	while (runner && runner != this.root) {
@@ -95,4 +123,3 @@ RustyTools.SymbolTable.prototype.depth = function() {
 
 	return depth;
 };
-

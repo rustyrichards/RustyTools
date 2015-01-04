@@ -14,25 +14,33 @@
 			.testFrame.json {border-color:#AAA;}
 			.report-style .description {font-weight:bold;}
 			.report-style .test {margin-bottom: 1em;}
-			.report-style .log {margin-left: 2em; color: #446;}
-			.report-style .error {margin-left: 2em; color: #800;}
-			.report-style .exception {margin-left: 2em; color: #800;}
+			.report-style .desc-excepted {margin-left: 2em; color: #800;}
+			.report-style .desc-passed {margin-left: 2em; color: #446;}
+            .title {font-weight:bold;}
+            .success  {margin-left: 2em; color: #446;}
+            .information {color: #000;}
+			.warn {margin-left: 2em; color: #a70;}
+			.fail {margin-left: 2em; color: #F00;}
+			.exception {margin-left: 2em; color: #800;}
 		</style>
 	</head>
 	<body>
 		<div class="report-style" id="report"></div>
 		<div class="testFrame json" id="json"><div><div></div></div></div>
 		<script src="lib/rustyTools.js"></script>
-		<script>RustyTools.configure({test: true});</script>
+        <script>RustyTools.configure({test: true});</script>
+		<script src="lib/rustyToolsObj.js"></script>
+		<script src="lib/rustyToolsDOM.js"></script>
 		<script src="lib/rustyToolsEvents.js"></script>
 		<script src="lib/rustyToolsFn.js"></script>
 		<script src="lib/rustyToolsStr.js"></script>
-		<script src="lib/rustyToolsSymbolTable.js"></script>
 		<script src="lib/rustyToolsTree.js"></script>
 		<script src="lib/rustyToolsTranslate.js"></script>
-		<script src="lib/rustyToolsTesting.js"></script>
 		<script src="lib/rustyToolsXhr.js"></script>
+		<script src="lib/rustyToolsSymbolTable.js"></script>
+		<script src="lib/rustyToolsTesting.js"></script>
 		<script src="lib/rustyTools__test.js"></script>
+		<!--
 		<script src="lib/rustyToolsEvents__test.js"></script>
 		<script src="lib/rustyToolsFn__test.js"></script>
 		<script src="lib/rustyToolsStr__test.js"></script>
@@ -40,7 +48,8 @@
 		<script src="lib/rustyToolsTree__test.js"></script>
 		<script src="lib/rustyToolsTranslate__test.js"></script>
 		<script src="lib/rustyToolsXhr__test.js"></script>
-		<script>RustyTools.configure({test: true}); RustyTools.load(null,
+		-->
+		<script>RustyTools.configure({test: true}); RustyTools.load(
 			'RustyTools.Testing.__test');</script>
 		<!-- <script src="translate_tester.js"></script> -->
 	</body>

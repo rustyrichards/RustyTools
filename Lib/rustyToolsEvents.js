@@ -2,8 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/*jshint eqnull: true, curly: false, latedef: true, newcap: true, undef: true, unused: true, strict: true, browser: true, devel: true*/
+/* global RustyTools, self */
 
-if (!RustyTools) RustyTools = {};
+'object' === typeof self.RustyTools || (RustyTools = {});
 
 
 /**
@@ -21,6 +23,7 @@ if (!RustyTools) RustyTools = {};
  *	EVENTS.playback() to playback the events.
  */
 RustyTools.Events = function() {
+    "use strict";
 	this.record;
 };
 

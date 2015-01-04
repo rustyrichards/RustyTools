@@ -2,10 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/*jshint    eqnull: true, curly: false, latedef: true, newcap: true, undef: true, unused: true, strict: true, browser: true, devel: true*/
+/* global RustyTools, self */
+
 
 // Functional support
-// Chain to the global object so RustyTools.Fn can be the context for function calls
-RustyTools.Fn = RustyTools.wrapObject(self);
+// Add functional devines to the globabl object.
+RustyTools.Fn = self.wrapObject();
 
 // Reduce implementation derived from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
 if (RustyTools.cfg.test || 'function' !== typeof Array.prototype.reduce) {
@@ -91,7 +94,7 @@ if (RustyTools.cfg.test || !Array.prototype.map) {
 		// k be ToUint32(lenValue).
 		var k = O.length >>> 0;
 
-		var T = opt_thisArg || null;
+		var T = opt_thisArg || null;  
 
 		var result = new Array(k);
 
@@ -155,7 +158,7 @@ RustyTools.Fn.propertyWalk_ = function(result, visited, keyPath, object,
 //		result - the output so far.  The return from fnCallback will replace result.
 //		key - the string name of the property.
 //		value - the value of the property.
-//    keyPath - an array of all the keys from ancestor objects.  (key will be the
+//      keyPath - an array of all the keys from ancestor objects.  (key will be the
 //				last value in the array.)
 RustyTools.Fn.propertyWalk = function(object, fnCallback, opt_fnPropertyWanted, opt_thisArg) {
 	"use strict";

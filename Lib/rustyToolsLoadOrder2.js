@@ -6,5 +6,6 @@
 /* global RustyTools, self */
 
 'object' === typeof self.RustyTools || (RustyTools = {});
+self.RustyTools.loadOrder || (RustyTools.loadOrder = []);
 
-RustyTools.Empty = {};
+RustyTools.loadOrder.push(2);
